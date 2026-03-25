@@ -72,9 +72,13 @@ export default function ImportarExtratosPage() {
     try {
       setIsSubmitting(true);
 
-      await uploadExtractFiles(files.map((item) => item.file));
+      const result = await uploadExtractFiles(files.map((item) => item.file));
 
-      console.log("Arquivos enviados com sucesso");
+      navigate("/extratos/revisao", {
+        state: {
+          importedFiles: result.files,
+        },
+      });
     } catch (error) {
       console.error(error);
     } finally {

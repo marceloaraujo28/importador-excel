@@ -65,6 +65,19 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             <FileText size={18} />
             Extratos
           </NavLink>
+          <NavLink
+            to="/saldos-iniciais"
+            onClick={onClose}
+            className={({ isActive }) =>
+              clsx(
+                "flex items-center gap-3 px-4 py-2 rounded-lg transition",
+                isActive ? "bg-blue-600" : "text-gray-300 hover:bg-white/10",
+              )
+            }
+          >
+            <FileText size={18} />
+            Saldos Iniciais
+          </NavLink>
         </nav>
       </aside>
     </>
