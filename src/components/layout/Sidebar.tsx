@@ -26,7 +26,12 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         )}
       >
         <div className="h-16 flex items-center justify-between px-6 text-lg font-semibold border-b border-white/10">
-          <span>AGROMEN</span>
+          <div className="bg-white flex justify-between items-center rounded-2xl p-1 gap-1 opacity-80">
+            <img src="/grupo_vale.png" alt="Logo" className="h-8 w-8" />
+            <span className="text-sm text-center text-gray-800">
+              Grupo Vale do Verdão & Cambuí
+            </span>
+          </div>
 
           <button
             onClick={onClose}

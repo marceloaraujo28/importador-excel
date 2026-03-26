@@ -60,7 +60,36 @@ export type ExtratoListItem = {
   createdAt: string;
 };
 
+export type ListExtratosMeta = {
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+};
+
 export type ListExtratosResponse = {
   message: string;
   data: ExtratoListItem[];
+  meta: ListExtratosMeta;
+};
+
+export type ListExtratosParams = {
+  page?: number;
+  pageSize?: number;
+  assignment?: Exclude<ExtractAssignment, "IGNORAR">;
+  dateFrom?: string;
+  dateTo?: string;
+  dateOrder?: "asc" | "desc";
+};
+
+export type UpdateExtratosPayload = {
+  updates: Array<{
+    id: string;
+    assignment: Exclude<ExtractAssignment, "IGNORAR">;
+  }>;
+};
+
+export type UpdateExtratosResponse = {
+  message: string;
+  updatedCount: number;
 };

@@ -1,15 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CalendarRange, Loader2 } from "lucide-react";
-import { getDashboardConsolidado } from "../../services/dashboard.service";
+
 import type {
   DashboardAccount,
   DashboardCompany,
   DashboardConsolidadoData,
   DashboardGroup,
 } from "../../types/dashboard";
+import { getDashboardConsolidado } from "../../services/dashboard.service";
 
 type DashboardTab = "sintetica" | "analitica" | "detalhada";
 type ConsolidadoMetricTab = "available" | "sucata" | "application";
+
+const GROUP_ORDER = ["Grupo Vale do Verdão", "Grupo Cambuí"] as const;
+
+const COMPANY_ORDER = [
+  "Vale do Verdão S/A Açúcar e Álcool",
+  "Usina Panorama S/A",
+  "Floresta S/A Açúcar e Álcool",
+  "Agropecuária Primavera LTDA",
+  "Floresta Agrícola LTDA",
+  "Energética Entre Rios",
+  "Cambuí Açúcar e Álcool LTDA",
+  "Energética Cambuí LTDA",
+] as const;
+
+const COMPANY_ORDER_INDEX = new Map<string, number>(
+  COMPANY_ORDER.map((name, index) => [name, index]),
+);
+
+const GROUP_ORDER_INDEX = new Map<string, number>(
+  GROUP_ORDER.map((name, index) => [name, index]),
+);
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -28,20 +50,20 @@ function formatCurrencyOrDash(value: number) {
   return formatCurrency(value);
 }
 
-function formatSignedCurrencyOrDash(value: number) {
-  if (!value) return "-";
-
-  if (value > 0) {
-    return `+ ${formatCurrency(value)}`;
-  }
-
-  return `- ${formatCurrency(Math.abs(value))}`;
-}
-
 function getSignedValueColor(value: number) {
   if (value > 0) return "text-emerald-600";
   if (value < 0) return "text-red-600";
   return "text-gray-500";
+}
+
+function getPositiveValueColor(value: number) {
+  if (!value) return "text-gray-500";
+  return "text-emerald-600";
+}
+
+function getNegativeValueColor(value: number) {
+  if (!value) return "text-gray-500";
+  return "text-red-600";
 }
 
 function getMetricColor(metric: ConsolidadoMetricTab | "total") {
@@ -68,6 +90,41 @@ function getMetricValue(
   if (metric === "available") return company.available;
   if (metric === "sucata") return company.sucata;
   return company.application;
+}
+
+function compareCompaniesByDefinedOrder(
+  a: { name: string },
+  b: { name: string },
+) {
+  const aIndex = COMPANY_ORDER_INDEX.get(a.name) ?? Number.MAX_SAFE_INTEGER;
+  const bIndex = COMPANY_ORDER_INDEX.get(b.name) ?? Number.MAX_SAFE_INTEGER;
+
+  if (aIndex !== bIndex) {
+    return aIndex - bIndex;
+  }
+
+  return a.name.localeCompare(b.name);
+}
+
+function compareGroupsByDefinedOrder(
+  a: { name: string } | { groupName: string },
+  b: { name: string } | { groupName: string },
+) {
+  const aName = "name" in a ? a.name : a.groupName;
+  const bName = "name" in b ? b.name : b.groupName;
+
+  const aIndex =
+    GROUP_ORDER_INDEX.get(aName as (typeof GROUP_ORDER)[number]) ??
+    Number.MAX_SAFE_INTEGER;
+  const bIndex =
+    GROUP_ORDER_INDEX.get(bName as (typeof GROUP_ORDER)[number]) ??
+    Number.MAX_SAFE_INTEGER;
+
+  if (aIndex !== bIndex) {
+    return aIndex - bIndex;
+  }
+
+  return aName.localeCompare(bName);
 }
 
 function sumAccounts(accounts: DashboardAccount[]) {
@@ -120,25 +177,27 @@ function buildGroupedCompanies(companies: DashboardCompany[]) {
     map.set(company.groupName, current);
   }
 
-  return Array.from(map.entries()).map(([groupName, items]) => ({
-    groupName,
-    companies: items,
-    totals: items.reduce(
-      (acc, company) => {
-        acc.available += company.available;
-        acc.sucata += company.sucata;
-        acc.application += company.application;
-        acc.total += company.total;
-        return acc;
-      },
-      {
-        available: 0,
-        sucata: 0,
-        application: 0,
-        total: 0,
-      },
-    ),
-  }));
+  return Array.from(map.entries())
+    .map(([groupName, items]) => ({
+      groupName,
+      companies: [...items].sort(compareCompaniesByDefinedOrder),
+      totals: items.reduce(
+        (acc, company) => {
+          acc.available += company.available;
+          acc.sucata += company.sucata;
+          acc.application += company.application;
+          acc.total += company.total;
+          return acc;
+        },
+        {
+          available: 0,
+          sucata: 0,
+          application: 0,
+          total: 0,
+        },
+      ),
+    }))
+    .sort(compareGroupsByDefinedOrder);
 }
 
 function GroupSummaryCard({
@@ -282,7 +341,10 @@ export default function DashboardPage() {
 
       setDashboardData(result.data);
 
-      const firstCompany = result.data.companies[0]?.name ?? "";
+      const sortedCompanies = [...result.data.companies].sort(
+        compareCompaniesByDefinedOrder,
+      );
+      const firstCompany = sortedCompanies[0]?.name ?? "";
       setSelectedCompanyName((current) => current || firstCompany);
     } catch (error) {
       setErrorMessage(
@@ -298,8 +360,19 @@ export default function DashboardPage() {
     loadDashboard();
   }, []);
 
-  const groups = dashboardData?.groups ?? [];
-  const companies = dashboardData?.companies ?? [];
+  const groups = useMemo(
+    () => [...(dashboardData?.groups ?? [])].sort(compareGroupsByDefinedOrder),
+    [dashboardData?.groups],
+  );
+
+  const companies = useMemo(
+    () =>
+      [...(dashboardData?.companies ?? [])].sort(
+        compareCompaniesByDefinedOrder,
+      ),
+    [dashboardData?.companies],
+  );
+
   const accounts = dashboardData?.accounts ?? [];
   const summary = dashboardData?.summary ?? null;
 
@@ -314,23 +387,15 @@ export default function DashboardPage() {
   );
 
   const companiesSortedByMetric = useMemo(() => {
-    const sorted = [...companies];
-
-    sorted.sort((a, b) => {
-      const aValue = getMetricValue(a, metricTab);
-      const bValue = getMetricValue(b, metricTab);
-      return bValue - aValue;
-    });
-
-    return sorted;
-  }, [companies, metricTab]);
+    return [...companies].sort(compareCompaniesByDefinedOrder);
+  }, [companies]);
 
   const groupedCompanies = useMemo(() => {
     return buildGroupedCompanies(companies);
   }, [companies]);
 
   const detailedCompanyOptions = useMemo(() => {
-    return companies.map((company) => company.name);
+    return [...companies].map((company) => company.name);
   }, [companies]);
 
   const detailedAccounts = useMemo(() => {
@@ -682,16 +747,18 @@ export default function DashboardPage() {
 
                 <tr className="bg-gray-100 font-bold text-gray-900">
                   <td className="px-4 py-4">TOTAL GERAL</td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-4 text-emerald-600">
                     {formatCurrency(summary.available)}
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-4 text-amber-600">
                     {formatCurrencyOrDash(summary.sucata)}
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-4 text-blue-600">
                     {formatCurrencyOrDash(summary.application)}
                   </td>
-                  <td className="px-4 py-4">{formatCurrency(summary.total)}</td>
+                  <td className="px-4 py-4 text-gray-900">
+                    {formatCurrency(summary.total)}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -730,78 +797,187 @@ export default function DashboardPage() {
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-            <table className="min-w-[1480px] w-full text-left">
+            <table className="w-full min-w-[1360px] text-left">
               <thead className="bg-gray-50">
-                <tr className="text-sm uppercase tracking-wide text-gray-700">
-                  <th className="px-4 py-4 font-semibold">ID</th>
-                  <th className="px-4 py-4 font-semibold">Banco</th>
-                  <th className="px-4 py-4 font-semibold">Saldo Inicial</th>
-                  <th className="px-4 py-4 font-semibold">Entradas</th>
-                  <th className="px-4 py-4 font-semibold">Saídas</th>
-                  <th className="px-4 py-4 font-semibold">Tarifas</th>
-                  <th className="px-4 py-4 font-semibold">Rendimentos</th>
-                  <th className="px-4 py-4 font-semibold">Resgates</th>
-                  <th className="px-4 py-4 font-semibold">Aplicações</th>
-                  <th className="px-4 py-4 font-semibold">Transferência EC</th>
-                  <th className="px-4 py-4 font-semibold">Saldo Final</th>
-                  <th className="px-4 py-4 font-semibold">Consolidado</th>
+                <tr className="text-[11px] uppercase tracking-wide text-gray-700">
+                  <th className="px-3 py-3 font-semibold">ID</th>
+                  <th className="px-3 py-3 font-semibold">Banco</th>
+                  <th className="px-3 py-3 font-semibold">Tipo</th>
+                  <th className="px-3 py-3 font-semibold">Saldo Inicial</th>
+                  <th className="px-3 py-3 font-semibold">Entradas</th>
+                  <th className="px-3 py-3 font-semibold">Saídas</th>
+                  <th className="px-3 py-3 font-semibold">Tarifas</th>
+                  <th className="px-3 py-3 font-semibold">Rendimentos</th>
+                  <th className="px-3 py-3 font-semibold">Resgates</th>
+                  <th className="px-3 py-3 font-semibold">Aplicações</th>
+                  <th className="px-3 py-3 font-semibold">Transferência EC</th>
+                  <th className="px-3 py-3 font-semibold">Saldo Final</th>
+                  <th className="px-3 py-3 font-semibold">Consolidado</th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-gray-100">
-                {detailedAccounts.map((account) => (
-                  <tr key={account.accountId} className="text-gray-700">
-                    <td className="px-4 py-4 font-medium text-gray-900">
-                      {account.accountId}
-                    </td>
-                    <td className="px-4 py-4">{account.bankName}</td>
-                    <td className="px-4 py-4">
-                      {formatCurrency(
-                        account.initialAvailable + account.initialApplication,
-                      )}
-                    </td>
-                    <td className="px-4 py-4">
-                      {formatCurrencyOrDash(account.entries)}
-                    </td>
-                    <td className="px-4 py-4">
-                      {formatCurrencyOrDash(account.outputs)}
-                    </td>
-                    <td className="px-4 py-4">
-                      {formatCurrencyOrDash(account.fees)}
-                    </td>
-                    <td className="px-4 py-4">
-                      {formatCurrencyOrDash(account.yields)}
-                    </td>
-                    <td className="px-4 py-4">
-                      {formatCurrencyOrDash(account.rescues)}
-                    </td>
-                    <td className="px-4 py-4">
-                      {formatCurrencyOrDash(account.applications)}
-                    </td>
-                    <td
-                      className={`px-4 py-4 font-medium ${getSignedValueColor(
-                        account.transferEcNet,
-                      )}`}
-                    >
-                      {formatSignedCurrencyOrDash(account.transferEcNet)}
-                    </td>
-                    <td className="px-4 py-4">
-                      {formatCurrency(
-                        account.available +
-                          account.application +
-                          account.sucata,
-                      )}
-                    </td>
-                    <td className="px-4 py-4 font-semibold text-gray-900">
-                      {formatCurrency(account.total)}
-                    </td>
-                  </tr>
-                ))}
+                {detailedAccounts.map((account) => {
+                  const correnteSaldoInicial = account.initialAvailable;
+                  const correnteSaldoFinal = account.available;
+
+                  const aplicacaoSaldoInicial = account.initialApplication;
+                  const aplicacaoSaldoFinal =
+                    account.application + account.sucata;
+
+                  return (
+                    <>
+                      <tr
+                        key={`${account.accountId}-corrente`}
+                        className="border-t-2 border-gray-300 text-sm text-gray-700"
+                      >
+                        <td
+                          rowSpan={2}
+                          className="px-3 py-3 align-middle font-medium text-gray-900"
+                        >
+                          {account.accountId}
+                        </td>
+
+                        <td
+                          rowSpan={2}
+                          className="px-3 py-3 align-middle text-gray-700"
+                        >
+                          {account.bankName}
+                        </td>
+
+                        <td className="px-3 py-3 font-medium text-gray-900">
+                          CONTA CORRENTE
+                        </td>
+
+                        <td className="px-3 py-3">
+                          {formatCurrencyOrDash(correnteSaldoInicial)}
+                        </td>
+
+                        <td
+                          className={`px-3 py-3 ${getPositiveValueColor(
+                            account.entries,
+                          )}`}
+                        >
+                          {formatCurrencyOrDash(account.entries)}
+                        </td>
+
+                        <td
+                          className={`px-3 py-3 ${getNegativeValueColor(
+                            account.outputs,
+                          )}`}
+                        >
+                          {formatCurrencyOrDash(account.outputs)}
+                        </td>
+
+                        <td
+                          className={`px-3 py-3 ${getNegativeValueColor(
+                            account.fees,
+                          )}`}
+                        >
+                          {formatCurrencyOrDash(account.fees)}
+                        </td>
+
+                        <td
+                          className={`px-3 py-3 ${getPositiveValueColor(
+                            account.yields,
+                          )}`}
+                        >
+                          {formatCurrencyOrDash(account.yields)}
+                        </td>
+
+                        <td
+                          className={`px-3 py-3 ${getPositiveValueColor(
+                            account.rescues,
+                          )}`}
+                        >
+                          {formatCurrencyOrDash(account.rescues)}
+                        </td>
+
+                        <td
+                          className={`px-3 py-3 ${getNegativeValueColor(
+                            account.applications,
+                          )}`}
+                        >
+                          {formatCurrencyOrDash(account.applications)}
+                        </td>
+
+                        <td
+                          className={`px-3 py-3 font-medium ${getSignedValueColor(
+                            account.transferEcNet,
+                          )}`}
+                        >
+                          {formatCurrencyOrDash(
+                            Math.abs(account.transferEcNet || 0),
+                          )}
+                        </td>
+
+                        <td className="px-3 py-3 font-medium text-gray-900">
+                          {formatCurrencyOrDash(correnteSaldoFinal)}
+                        </td>
+
+                        <td
+                          rowSpan={2}
+                          className="px-3 py-3 align-middle font-semibold text-gray-900"
+                        >
+                          {formatCurrency(account.total)}
+                        </td>
+                      </tr>
+
+                      <tr
+                        key={`${account.accountId}-aplicacao`}
+                        className="bg-gray-50/50 text-sm text-gray-700"
+                      >
+                        <td className="px-3 py-3 font-medium text-gray-900">
+                          APLICAÇÕES
+                        </td>
+
+                        <td className="px-3 py-3">
+                          {formatCurrencyOrDash(aplicacaoSaldoInicial)}
+                        </td>
+
+                        <td className="px-3 py-3 text-gray-500">-</td>
+                        <td className="px-3 py-3 text-gray-500">-</td>
+                        <td className="px-3 py-3 text-gray-500">-</td>
+                        <td className="px-3 py-3 text-gray-500">-</td>
+
+                        <td
+                          className={`px-3 py-3 ${getNegativeValueColor(
+                            account.rescues,
+                          )}`}
+                        >
+                          {formatCurrencyOrDash(account.rescues)}
+                        </td>
+
+                        <td
+                          className={`px-3 py-3 ${getPositiveValueColor(
+                            account.applications,
+                          )}`}
+                        >
+                          {formatCurrencyOrDash(account.applications)}
+                        </td>
+
+                        <td className="px-3 py-3 text-gray-500">-</td>
+
+                        <td
+                          className={`px-3 py-3 font-medium ${
+                            aplicacaoSaldoFinal < 0
+                              ? "text-red-600"
+                              : aplicacaoSaldoFinal > 0
+                                ? "text-emerald-600"
+                                : "text-gray-900"
+                          }`}
+                        >
+                          {formatCurrencyOrDash(aplicacaoSaldoFinal)}
+                        </td>
+                      </tr>
+                    </>
+                  );
+                })}
 
                 {detailedAccounts.length === 0 && (
                   <tr>
                     <td
-                      colSpan={12}
+                      colSpan={13}
                       className="px-4 py-10 text-center text-sm text-gray-500"
                     >
                       Nenhuma conta encontrada para a empresa selecionada.
@@ -812,27 +988,47 @@ export default function DashboardPage() {
                 {detailedAccounts.length > 0 && (
                   <>
                     <tr className="bg-gray-50 font-semibold text-gray-900">
-                      <td colSpan={10} className="px-4 py-4 text-right">
+                      <td colSpan={11} className="px-3 py-3 text-right">
                         CONTA CORRENTE
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-3">
                         {formatCurrency(detailedTotals.available)}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-3">
                         {formatCurrency(detailedTotals.available)}
                       </td>
                     </tr>
 
                     <tr className="bg-gray-50 font-semibold text-gray-900">
-                      <td colSpan={10} className="px-4 py-4 text-right">
+                      <td colSpan={11} className="px-3 py-3 text-right">
                         APLICAÇÕES FINANCEIRAS
                       </td>
-                      <td className="px-4 py-4">
+                      <td
+                        className={`px-3 py-3 ${
+                          detailedTotals.application + detailedTotals.sucata < 0
+                            ? "text-red-600"
+                            : detailedTotals.application +
+                                  detailedTotals.sucata >
+                                0
+                              ? "text-emerald-600"
+                              : ""
+                        }`}
+                      >
                         {formatCurrency(
                           detailedTotals.application + detailedTotals.sucata,
                         )}
                       </td>
-                      <td className="px-4 py-4">
+                      <td
+                        className={`px-3 py-3 ${
+                          detailedTotals.application + detailedTotals.sucata < 0
+                            ? "text-red-600"
+                            : detailedTotals.application +
+                                  detailedTotals.sucata >
+                                0
+                              ? "text-emerald-600"
+                              : ""
+                        }`}
+                      >
                         {formatCurrency(
                           detailedTotals.application + detailedTotals.sucata,
                         )}
@@ -840,13 +1036,13 @@ export default function DashboardPage() {
                     </tr>
 
                     <tr className="bg-gray-100 font-bold text-gray-900">
-                      <td colSpan={10} className="px-4 py-4 text-right">
+                      <td colSpan={11} className="px-3 py-3 text-right">
                         TOTAL GERAL
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-3">
                         {formatCurrency(detailedTotals.total)}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-3">
                         {formatCurrency(detailedTotals.total)}
                       </td>
                     </tr>
@@ -882,12 +1078,18 @@ function FragmentGroupRows({
           <td className="px-4 py-4 font-medium text-gray-900">
             {company.name}
           </td>
-          <td className="px-4 py-4">{formatCurrency(company.available)}</td>
-          <td className="px-4 py-4">{formatCurrencyOrDash(company.sucata)}</td>
-          <td className="px-4 py-4">
+          <td className="px-4 py-4 text-emerald-600">
+            {formatCurrency(company.available)}
+          </td>
+          <td className="px-4 py-4 text-amber-600">
+            {formatCurrencyOrDash(company.sucata)}
+          </td>
+          <td className="px-4 py-4 text-blue-600">
             {formatCurrencyOrDash(company.application)}
           </td>
-          <td className="px-4 py-4">{formatCurrency(company.total)}</td>
+          <td className="px-4 py-4 text-gray-900">
+            {formatCurrency(company.total)}
+          </td>
         </tr>
       ))}
 
@@ -897,12 +1099,18 @@ function FragmentGroupRows({
             ? "TOTAL - GRUPO VALE DO VERDÃO"
             : "TOTAL - CAMBUÍ"}
         </td>
-        <td className="px-4 py-4">{formatCurrency(totals.available)}</td>
-        <td className="px-4 py-4">{formatCurrencyOrDash(totals.sucata)}</td>
-        <td className="px-4 py-4">
+        <td className="px-4 py-4 text-emerald-600">
+          {formatCurrency(totals.available)}
+        </td>
+        <td className="px-4 py-4 text-amber-600">
+          {formatCurrencyOrDash(totals.sucata)}
+        </td>
+        <td className="px-4 py-4 text-blue-600">
           {formatCurrencyOrDash(totals.application)}
         </td>
-        <td className="px-4 py-4">{formatCurrency(totals.total)}</td>
+        <td className="px-4 py-4 text-gray-900">
+          {formatCurrency(totals.total)}
+        </td>
       </tr>
     </>
   );
