@@ -112,3 +112,42 @@ export async function updateExtratos(
 
   return response.json();
 }
+
+export async function exportExtratosFile(params: {
+  assignment?: Exclude<import("../types/extrato").ExtractAssignment, "IGNORAR">;
+  dateFrom?: string;
+  dateTo?: string;
+  dateOrder?: "asc" | "desc";
+}) {
+  const searchParams = new URLSearchParams();
+
+  if (params.assignment) {
+    searchParams.set("assignment", params.assignment);
+  }
+
+  if (params.dateFrom) {
+    searchParams.set("dateFrom", params.dateFrom);
+  }
+
+  if (params.dateTo) {
+    searchParams.set("dateTo", params.dateTo);
+  }
+
+  if (params.dateOrder) {
+    searchParams.set("dateOrder", params.dateOrder);
+  }
+
+  const queryString = searchParams.toString();
+  const url = queryString
+    ? `${BASE_URL}/extratos/exportar?${queryString}`
+    : `${BASE_URL}/extratos/exportar`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error ?? "Erro ao exportar extratos");
+  }
+
+  return response.blob();
+}

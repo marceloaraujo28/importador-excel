@@ -8,7 +8,11 @@ import {
   Upload,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { listExtratos, updateExtratos } from "../../services/extratos.service";
+import {
+  listExtratos,
+  updateExtratos,
+  exportExtratosFile,
+} from "../../services/extratos.service";
 import type {
   ExtractAssignment,
   ExtratoListItem,
@@ -73,6 +77,7 @@ export default function ExtratosPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(
@@ -129,6 +134,37 @@ export default function ExtratosPage() {
   useEffect(() => {
     loadExtratos();
   }, [page, pageSize, assignmentFilter, dateFrom, dateTo, dateOrder]);
+
+  async function handleExport() {
+    try {
+      setIsExporting(true);
+      setErrorMessage(null);
+
+      const blob = await exportExtratosFile({
+        ...(assignmentFilter !== "TODAS"
+          ? { assignment: assignmentFilter }
+          : {}),
+        ...(dateFrom ? { dateFrom } : {}),
+        ...(dateTo ? { dateTo } : {}),
+        dateOrder,
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "extratos.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Erro ao exportar extratos.",
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   function handleAssignmentChange(
     id: string,
@@ -215,9 +251,23 @@ export default function ExtratosPage() {
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium transition hover:bg-gray-50 sm:w-auto">
-            <Download size={16} />
-            Exportar
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={isExporting}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Exportando...
+              </>
+            ) : (
+              <>
+                <Download size={16} />
+                Exportar
+              </>
+            )}
           </button>
 
           <button
@@ -395,7 +445,7 @@ export default function ExtratosPage() {
         ) : (
           <>
             <div className="mt-5 w-full overflow-x-auto">
-              <table className="w-full min-w-[1120px] text-left">
+              <table className="w-full min-w-280 text-left">
                 <thead className="bg-gray-50">
                   <tr className="text-xs uppercase tracking-wide text-gray-500">
                     <th className="px-4 py-3 font-medium">ID Conta</th>
@@ -410,15 +460,15 @@ export default function ExtratosPage() {
                 <tbody className="divide-y divide-gray-100">
                   {rows.map((row) => (
                     <tr key={row.id}>
-                      <td className="w-[90px] whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-800">
+                      <td className="w-22.5 whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-800">
                         {row.accountId}
                       </td>
 
-                      <td className="w-[190px] whitespace-nowrap px-4 py-4 text-sm text-gray-600">
+                      <td className="w-47.5 whitespace-nowrap px-4 py-4 text-sm text-gray-600">
                         {row.bankName}
                       </td>
 
-                      <td className="w-[130px] whitespace-nowrap px-4 py-4 text-sm text-gray-600">
+                      <td className="w-32.5 whitespace-nowrap px-4 py-4 text-sm text-gray-600">
                         {row.date}
                       </td>
 
@@ -426,11 +476,11 @@ export default function ExtratosPage() {
                         {row.description}
                       </td>
 
-                      <td className="w-[150px] whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-800">
+                      <td className="w-37.5 whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-800">
                         {formatCurrency(row.amount)}
                       </td>
 
-                      <td className="w-[260px] whitespace-nowrap px-4 py-4 text-sm">
+                      <td className="w-65 whitespace-nowrap px-4 py-4 text-sm">
                         <select
                           value={row.assignment}
                           onChange={(event) =>
@@ -442,7 +492,7 @@ export default function ExtratosPage() {
                               >,
                             )
                           }
-                          className={`w-full min-w-[220px] rounded-xl border px-3 py-2 text-sm font-medium outline-none transition focus:ring-2 ${getAssignmentSelectClasses(
+                          className={`w-full min-w-55 rounded-xl border px-3 py-2 text-sm font-medium outline-none transition focus:ring-2 ${getAssignmentSelectClasses(
                             row.assignment,
                           )}`}
                         >
