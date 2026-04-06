@@ -27,6 +27,9 @@ import {
 
 type EditableExtratoRow = ExtratoListItem & {
   originalAssignment: ExtratoListItem["assignment"];
+  originalAmount: ExtratoListItem["amount"];
+  draftAmount: ExtratoListItem["amount"] | undefined;
+  isEditingAmount: boolean;
 };
 
 const assignmentOptions: Array<
@@ -48,6 +51,18 @@ function formatCurrency(value: number) {
     style: "currency",
     currency: "BRL",
   }).format(value);
+}
+
+function normalizeCurrencyValue(value: number | undefined) {
+  return value === undefined ? null : Math.round(value * 100);
+}
+
+function hasAssignmentChanged(row: EditableExtratoRow) {
+  return row.assignment !== row.originalAssignment;
+}
+
+function hasAmountChanged(row: EditableExtratoRow) {
+  return normalizeCurrencyValue(row.amount) !== normalizeCurrencyValue(row.originalAmount);
 }
 
 function getAssignmentSelectClasses(assignment: string) {
@@ -115,8 +130,15 @@ export default function ExtratosPage() {
   const [pageSize, setPageSize] = useState(20);
 
   const changedRows = useMemo(() => {
-    return rows.filter((row) => row.assignment !== row.originalAssignment);
+    return rows.filter(
+      (row) => hasAssignmentChanged(row) || hasAmountChanged(row),
+    );
   }, [rows]);
+
+  const hasRowsBeingEdited = useMemo(
+    () => rows.some((row) => row.isEditingAmount),
+    [rows],
+  );
 
   async function loadExtratos() {
     try {
@@ -144,6 +166,9 @@ export default function ExtratosPage() {
         result.data.map((item) => ({
           ...item,
           originalAssignment: item.assignment,
+          originalAmount: item.amount,
+          draftAmount: item.amount,
+          isEditingAmount: false,
         })),
       );
       setMeta(result.meta);
@@ -269,6 +294,62 @@ export default function ExtratosPage() {
     );
   }
 
+  function handleStartAmountEdit(id: string) {
+    setRows((current) =>
+      current.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              isEditingAmount: true,
+              draftAmount: row.amount,
+            }
+          : row,
+      ),
+    );
+  }
+
+  function handleDraftAmountChange(id: string, amount: number | undefined) {
+    setRows((current) =>
+      current.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              draftAmount: amount,
+            }
+          : row,
+      ),
+    );
+  }
+
+  function handleCancelAmountEdit(id: string) {
+    setRows((current) =>
+      current.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              isEditingAmount: false,
+              draftAmount: row.amount,
+            }
+          : row,
+      ),
+    );
+  }
+
+  function handleConfirmAmountEdit(id: string) {
+    setRows((current) =>
+      current.map((row) =>
+        row.id === id && row.draftAmount !== undefined
+          ? {
+              ...row,
+              amount: Number(row.draftAmount.toFixed(2)),
+              draftAmount: Number(row.draftAmount.toFixed(2)),
+              isEditingAmount: false,
+            }
+          : row,
+      ),
+    );
+  }
+
   async function handleSaveChanges() {
     if (!changedRows.length) return;
 
@@ -281,6 +362,7 @@ export default function ExtratosPage() {
         updates: changedRows.map((row) => ({
           id: row.id,
           assignment: row.assignment,
+          ...(hasAmountChanged(row) ? { amount: row.amount } : {}),
         })),
       });
 
@@ -290,6 +372,9 @@ export default function ExtratosPage() {
             ? {
                 ...row,
                 originalAssignment: row.assignment,
+                originalAmount: row.amount,
+                draftAmount: row.amount,
+                isEditingAmount: false,
               }
             : row,
         ),
@@ -574,7 +659,7 @@ export default function ExtratosPage() {
           <button
             type="button"
             onClick={handleSaveChanges}
-            disabled={!changedRows.length || isSaving}
+            disabled={!changedRows.length || isSaving || hasRowsBeingEdited}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? (
@@ -590,6 +675,12 @@ export default function ExtratosPage() {
             )}
           </button>
         </div>
+
+        {hasRowsBeingEdited && (
+          <div className="mt-3 text-sm text-amber-600">
+            Confirme ou cancele a edição do valor antes de salvar as alterações.
+          </div>
+        )}
 
         {errorMessage && (
           <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -646,8 +737,67 @@ export default function ExtratosPage() {
                         {row.description}
                       </td>
 
-                      <td className="w-37.5 whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-800">
-                        {formatCurrency(row.amount)}
+                      <td className="w-52 px-4 py-4 text-sm font-medium text-gray-800">
+                        <div className="flex min-w-40 flex-col gap-2">
+                          {row.isEditingAmount ? (
+                            <>
+                              <NumericFormat
+                                value={row.draftAmount}
+                                thousandSeparator="."
+                                decimalSeparator=","
+                                prefix="R$ "
+                                decimalScale={2}
+                                allowNegative={false}
+                                className="w-full rounded-xl border px-3 py-2 text-sm font-medium"
+                                onValueChange={(values) =>
+                                  handleDraftAmountChange(
+                                    row.id,
+                                    values.floatValue,
+                                  )
+                                }
+                              />
+
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelAmountEdit(row.id)}
+                                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
+                                >
+                                  Cancelar
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleConfirmAmountEdit(row.id)}
+                                  disabled={row.draftAmount === undefined}
+                                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  Confirmar
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <span
+                                className={
+                                  hasAmountChanged(row)
+                                    ? "text-blue-700"
+                                    : "text-gray-800"
+                                }
+                              >
+                                {formatCurrency(row.amount)}
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={() => handleStartAmountEdit(row.id)}
+                                className="w-fit text-xs font-medium text-blue-600 transition hover:text-blue-700"
+                              >
+                                Editar
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
 
                       <td className="w-65 whitespace-nowrap px-4 py-4 text-sm">

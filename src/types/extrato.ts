@@ -90,6 +90,7 @@ export type UpdateExtratosPayload = {
   updates: Array<{
     id: string;
     assignment: Exclude<ExtractAssignment, "IGNORAR">;
+    amount?: number;
   }>;
 };
 
