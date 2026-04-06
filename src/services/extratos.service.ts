@@ -67,6 +67,22 @@ export async function listExtratos(
     searchParams.set("assignment", params.assignment);
   }
 
+  if (params.value !== undefined) {
+    searchParams.set("amount", String(params.value));
+  }
+
+  if (params.accountIds?.length) {
+    for (const accountId of params.accountIds) {
+      searchParams.append("accountId", accountId);
+    }
+  }
+
+  if (params.bankNames?.length) {
+    for (const bankName of params.bankNames) {
+      searchParams.append("bankName", bankName);
+    }
+  }
+
   if (params.dateFrom) {
     searchParams.set("dateFrom", params.dateFrom);
   }

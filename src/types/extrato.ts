@@ -4,6 +4,7 @@ export type ExtractAssignment =
   | "TARIFAS"
   | "APLICAÇÕES"
   | "RESGATES"
+  | "RENDIMENTOS"
   | "TRANSFERÊNCIA EC"
   | "IGNORAR"
   | "OUTROS";
@@ -80,6 +81,9 @@ export type ListExtratosParams = {
   dateFrom?: string;
   dateTo?: string;
   dateOrder?: "asc" | "desc";
+  value?: number;
+  accountIds?: string[];
+  bankNames?: string[];
 };
 
 export type UpdateExtratosPayload = {

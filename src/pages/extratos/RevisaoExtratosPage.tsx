@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   AlertCircle,
   ArrowLeft,
   FileSpreadsheet,
   Save,
   Trash2,
+  ChevronDown,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { confirmExtractReview } from "../../services/extratos.service";
@@ -23,6 +24,7 @@ const assignmentOptions: ExtractAssignment[] = [
   "SAÍDAS",
   "TARIFAS",
   "APLICAÇÕES",
+  "RENDIMENTOS",
   "RESGATES",
   "TRANSFERÊNCIA EC",
   "OUTROS",
@@ -55,6 +57,8 @@ function getAssignmentSelectClasses(assignment: string) {
       return "border-amber-200 bg-amber-50 text-amber-700 focus:border-amber-500 focus:ring-amber-100";
     case "APLICAÇÕES":
       return "border-blue-200 bg-blue-50 text-blue-700 focus:border-blue-500 focus:ring-blue-100";
+    case "RENDIMENTOS":
+      return "border-green-500 bg-green-100 text-green-800 focus:border-green-800 focus:ring-green-200";
     case "RESGATES":
       return "border-purple-200 bg-purple-50 text-purple-700 focus:border-purple-500 focus:ring-purple-100";
     case "TRANSFERÊNCIA EC":
@@ -91,16 +95,46 @@ export default function RevisaoExtratosPage() {
   const [dateOrder, setDateOrder] = useState<"DESC" | "ASC">("DESC");
   const [isSaving, setIsSaving] = useState(false);
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
+  const [isAccountIdDropdownOpen, setIsAccountIdDropdownOpen] = useState(false);
+  const accountIdDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setRows(initialRows);
   }, [initialRows]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        accountIdDropdownRef.current &&
+        !accountIdDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsAccountIdDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const accountIdOptions = useMemo(() => {
+    return Array.from(new Set(rows.map((row) => row.accountId))).sort();
+  }, [rows]);
 
   const filteredRows = useMemo(() => {
     let result = [...rows];
 
     if (assignmentFilter !== "TODAS") {
       result = result.filter((row) => row.assignment === assignmentFilter);
+    }
+
+    if (selectedAccountIds.length > 0) {
+      result = result.filter((row) =>
+        selectedAccountIds.includes(row.accountId),
+      );
     }
 
     result.sort((a, b) => {
@@ -111,7 +145,7 @@ export default function RevisaoExtratosPage() {
     });
 
     return result;
-  }, [rows, assignmentFilter, dateOrder]);
+  }, [rows, assignmentFilter, dateOrder, selectedAccountIds]);
 
   function handleAssignmentChange(
     indexToUpdate: number,
@@ -127,6 +161,18 @@ export default function RevisaoExtratosPage() {
           : row,
       ),
     );
+  }
+
+  function handleToggleAccountId(accountId: string) {
+    setSelectedAccountIds((current) =>
+      current.includes(accountId)
+        ? current.filter((id) => id !== accountId)
+        : [...current, accountId],
+    );
+  }
+
+  function handleClearAccountIdFilter() {
+    setSelectedAccountIds([]);
   }
 
   function handleRemoveRow(indexToRemove: number) {
@@ -287,7 +333,72 @@ export default function RevisaoExtratosPage() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div ref={accountIdDropdownRef} className="relative">
+              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+                Filtrar por ID
+              </label>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setIsAccountIdDropdownOpen((current) => !current)
+                }
+                className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition hover:border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                <span className="truncate text-left">
+                  {selectedAccountIds.length === 0
+                    ? "Todos os IDs"
+                    : `${selectedAccountIds.length} ID(s) selecionado(s)`}
+                </span>
+
+                <ChevronDown
+                  size={16}
+                  className={`shrink-0 transition ${
+                    isAccountIdDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {isAccountIdDropdownOpen && (
+                <div className="absolute z-20 mt-2 w-full rounded-2xl border border-gray-200 bg-white p-2 shadow-lg">
+                  <div className="max-h-64 overflow-y-auto">
+                    {accountIdOptions.map((accountId) => {
+                      const checked = selectedAccountIds.includes(accountId);
+
+                      return (
+                        <label
+                          key={accountId}
+                          className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => handleToggleAccountId(accountId)}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span>{accountId}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between border-t border-gray-100 px-2 pt-2">
+                    <span className="text-xs text-gray-500">
+                      {selectedAccountIds.length} selecionado(s)
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={handleClearAccountIdFilter}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <div>
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
                 Filtrar atribuição

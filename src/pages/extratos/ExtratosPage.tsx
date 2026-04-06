@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -18,6 +19,11 @@ import type {
   ExtratoListItem,
   ListExtratosMeta,
 } from "../../types/extrato";
+import { NumericFormat } from "react-number-format";
+import {
+  BANK_FILTER_OPTIONS,
+  ACCOUNT_FILTER_ITEMS,
+} from "../../constants/account-filters";
 
 type EditableExtratoRow = ExtratoListItem & {
   originalAssignment: ExtratoListItem["assignment"];
@@ -31,6 +37,7 @@ const assignmentOptions: Array<
   "SAÍDAS",
   "TARIFAS",
   "APLICAÇÕES",
+  "RENDIMENTOS",
   "RESGATES",
   "TRANSFERÊNCIA EC",
   "OUTROS",
@@ -53,6 +60,8 @@ function getAssignmentSelectClasses(assignment: string) {
       return "border-amber-200 bg-amber-50 text-amber-700 focus:border-amber-500 focus:ring-amber-100";
     case "APLICAÇÕES":
       return "border-blue-200 bg-blue-50 text-blue-700 focus:border-blue-500 focus:ring-blue-100";
+    case "RENDIMENTOS":
+      return "border-green-500 bg-green-100 text-green-800 focus:border-green-800 focus:ring-green-200";
     case "RESGATES":
       return "border-purple-200 bg-purple-50 text-purple-700 focus:border-purple-500 focus:ring-purple-100";
     case "TRANSFERÊNCIA EC":
@@ -84,12 +93,23 @@ export default function ExtratosPage() {
     null,
   );
 
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
+  const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
+
+  const [isAccountIdDropdownOpen, setIsAccountIdDropdownOpen] = useState(false);
+  const [isBankDropdownOpen, setIsBankDropdownOpen] = useState(false);
+
+  const accountIdDropdownRef = useRef<HTMLDivElement | null>(null);
+  const bankDropdownRef = useRef<HTMLDivElement | null>(null);
+
   const [assignmentFilter, setAssignmentFilter] = useState<
     "TODAS" | Exclude<ExtractAssignment, "IGNORAR">
   >("TODAS");
   const [dateOrder, setDateOrder] = useState<"asc" | "desc">("desc");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [value, setValue] = useState<number | undefined>(undefined);
+  const [debouncedValue, setDebouncedValue] = useState(value);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -113,6 +133,11 @@ export default function ExtratosPage() {
         ...(dateFrom ? { dateFrom } : {}),
         ...(dateTo ? { dateTo } : {}),
         dateOrder,
+        ...(debouncedValue !== undefined ? { value: debouncedValue } : {}),
+        ...(selectedAccountIds.length
+          ? { accountIds: selectedAccountIds }
+          : {}),
+        ...(selectedBanks.length ? { bankNames: selectedBanks } : {}),
       });
 
       setRows(
@@ -132,8 +157,70 @@ export default function ExtratosPage() {
   }
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedValue(value);
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [value]);
+
+  useEffect(() => {
     loadExtratos();
-  }, [page, pageSize, assignmentFilter, dateFrom, dateTo, dateOrder]);
+  }, [
+    page,
+    pageSize,
+    assignmentFilter,
+    dateFrom,
+    dateTo,
+    dateOrder,
+    debouncedValue,
+    selectedAccountIds,
+    selectedBanks,
+  ]);
+
+  function handleToggleAccountId(accountId: string) {
+    setSelectedAccountIds((current) =>
+      current.includes(accountId)
+        ? current.filter((id) => id !== accountId)
+        : [...current, accountId],
+    );
+    setPage(1);
+  }
+
+  function handleToggleBank(bankName: string) {
+    setSelectedBanks((current) =>
+      current.includes(bankName)
+        ? current.filter((bank) => bank !== bankName)
+        : [...current, bankName],
+    );
+    setPage(1);
+  }
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+
+      if (
+        accountIdDropdownRef.current &&
+        !accountIdDropdownRef.current.contains(target)
+      ) {
+        setIsAccountIdDropdownOpen(false);
+      }
+
+      if (
+        bankDropdownRef.current &&
+        !bankDropdownRef.current.contains(target)
+      ) {
+        setIsBankDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   async function handleExport() {
     try {
@@ -227,6 +314,9 @@ export default function ExtratosPage() {
     setDateOrder("desc");
     setDateFrom("");
     setDateTo("");
+    setValue(undefined);
+    setSelectedAccountIds([]);
+    setSelectedBanks([]);
     setPage(1);
   }
 
@@ -281,7 +371,7 @@ export default function ExtratosPage() {
       </div>
 
       <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-200 sm:p-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="space-y-4">
           <div>
             <h3 className="text-sm font-semibold text-gray-800">
               Lançamentos salvos
@@ -291,31 +381,122 @@ export default function ExtratosPage() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+          {/* ===== FILTROS ===== */}
+
+          {/* LINHA 1 */}
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {/* ID */}
+            <div ref={accountIdDropdownRef} className="relative">
+              <label className="mb-1 text-xs text-gray-500">ID Conta</label>
+              <button
+                type="button"
+                onClick={() => setIsAccountIdDropdownOpen((c) => !c)}
+                className="flex w-full items-center justify-between rounded-xl border px-3 py-2 text-sm"
+              >
+                {selectedAccountIds.length === 0
+                  ? "Todos os IDs"
+                  : `${selectedAccountIds.length} selecionado(s)`}
+                <ChevronDown size={16} />
+              </button>
+
+              {isAccountIdDropdownOpen && (
+                <div className="absolute z-20 mt-2 w-full rounded-xl border bg-white p-2 shadow">
+                  <div className="max-h-72 overflow-y-auto">
+                    {ACCOUNT_FILTER_ITEMS.map((account) => {
+                      const checked = selectedAccountIds.includes(account.code);
+
+                      return (
+                        <label
+                          key={account.code}
+                          className="flex gap-2 px-2 py-2 text-sm hover:bg-gray-50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => handleToggleAccountId(account.code)}
+                          />
+                          <div>
+                            <p>{account.code}</p>
+                            <p className="text-xs text-gray-500">
+                              {account.bankName}
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* BANCO */}
+            <div ref={bankDropdownRef} className="relative">
+              <label className="mb-1 text-xs text-gray-500">Banco</label>
+              <button
+                type="button"
+                onClick={() => setIsBankDropdownOpen((c) => !c)}
+                className="flex w-full items-center justify-between rounded-xl border px-3 py-2 text-sm"
+              >
+                {selectedBanks.length === 0
+                  ? "Todos os bancos"
+                  : `${selectedBanks.length} selecionado(s)`}
+                <ChevronDown size={16} />
+              </button>
+
+              {isBankDropdownOpen && (
+                <div className="absolute z-20 mt-2 w-full rounded-xl border bg-white p-2 shadow">
+                  {BANK_FILTER_OPTIONS.map((bank) => {
+                    const checked = selectedBanks.includes(bank);
+
+                    return (
+                      <label
+                        key={bank}
+                        className="flex gap-2 px-2 py-2 text-sm hover:bg-gray-50"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => handleToggleBank(bank)}
+                        />
+                        {bank}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* VALOR */}
             <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                Atribuição
-              </label>
+              <label className="mb-1 text-xs text-gray-500">Valor</label>
+              <NumericFormat
+                value={value}
+                thousandSeparator="."
+                decimalSeparator=","
+                prefix="R$ "
+                decimalScale={2}
+                className="w-full rounded-xl border px-3 py-2 text-sm"
+                onValueChange={(v) => setValue(v.floatValue)}
+              />
+            </div>
+
+            {/* ATRIBUIÇÃO */}
+            <div>
+              <label className="mb-1 text-xs text-gray-500">Atribuição</label>
               <select
                 value={assignmentFilter}
-                onChange={(event) => {
-                  setAssignmentFilter(
-                    event.target.value as
-                      | "TODAS"
-                      | Exclude<ExtractAssignment, "IGNORAR">,
-                  );
-                  setPage(1);
-                }}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                onChange={(e) => setAssignmentFilter(e.target.value as any)}
+                className="w-full rounded-xl border px-3 py-2 text-sm"
               >
-                {assignmentOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
+                {assignmentOptions.map((o) => (
+                  <option key={o}>{o}</option>
                 ))}
               </select>
             </div>
+          </div>
 
+          {/* LINHA 2 */}
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <div>
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
                 Data inicial
@@ -323,11 +504,8 @@ export default function ExtratosPage() {
               <input
                 type="date"
                 value={dateFrom}
-                onChange={(event) => {
-                  setDateFrom(event.target.value);
-                  setPage(1);
-                }}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full rounded-xl border px-3 py-2 text-sm"
               />
             </div>
 
@@ -338,11 +516,8 @@ export default function ExtratosPage() {
               <input
                 type="date"
                 value={dateTo}
-                onChange={(event) => {
-                  setDateTo(event.target.value);
-                  setPage(1);
-                }}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full rounded-xl border px-3 py-2 text-sm"
               />
             </div>
 
@@ -352,11 +527,8 @@ export default function ExtratosPage() {
               </label>
               <select
                 value={dateOrder}
-                onChange={(event) => {
-                  setDateOrder(event.target.value as "asc" | "desc");
-                  setPage(1);
-                }}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                onChange={(e) => setDateOrder(e.target.value as any)}
+                className="w-full rounded-xl border px-3 py-2 text-sm"
               >
                 <option value="desc">Mais recentes</option>
                 <option value="asc">Mais antigas</option>
@@ -369,11 +541,8 @@ export default function ExtratosPage() {
               </label>
               <select
                 value={pageSize}
-                onChange={(event) => {
-                  setPageSize(Number(event.target.value));
-                  setPage(1);
-                }}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="w-full rounded-xl border px-3 py-2 text-sm"
               >
                 <option value={10}>10</option>
                 <option value={20}>20</option>
@@ -381,13 +550,14 @@ export default function ExtratosPage() {
               </select>
             </div>
 
-            <button
-              type="button"
-              onClick={handleClearFilters}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-            >
-              Limpar filtros
-            </button>
+            <div className="flex items-end">
+              <button
+                onClick={handleClearFilters}
+                className="w-full rounded-xl border px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                Limpar filtros
+              </button>
+            </div>
           </div>
         </div>
 
