@@ -178,7 +178,7 @@ export const ACCOUNT_FILTER_ITEMS: AccountFilterItem[] = [
   },
   {
     code: "EE03",
-    bankName: "BANCO BRADESCO",
+    bankName: "BANCO BRADESCO TRIANON",
     companyName: "Energética Entre Rios",
   },
 
@@ -194,7 +194,7 @@ export const ACCOUNT_FILTER_ITEMS: AccountFilterItem[] = [
   },
   {
     code: "EC03",
-    bankName: "BANCO BRADESCO",
+    bankName: "BANCO BRADESCO TRIANON",
     companyName: "Energética Cambuí LTDA",
   },
 ];

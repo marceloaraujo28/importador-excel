@@ -109,3 +109,8 @@ export type UpdateExtratosResponse = {
   message: string;
   updatedCount: number;
 };
+
+export type DeleteExtratoResponse = {
+  message: string;
+  deletedCount: number;
+};

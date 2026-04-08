@@ -395,10 +395,17 @@ export default function DashboardPage() {
   }, [companies]);
 
   const detailedCompanyOptions = useMemo(() => {
-    return [...companies].map((company) => company.name);
+    const companiesName = [...companies].map((company) => company.name);
+    const finalOptions = ["Todas as empresas", ...companiesName];
+
+    return finalOptions;
   }, [companies]);
 
   const detailedAccounts = useMemo(() => {
+    if (selectedCompanyName === "Todas as empresas") {
+      return accounts;
+    }
+
     return accounts.filter(
       (account) => account.companyName === selectedCompanyName,
     );

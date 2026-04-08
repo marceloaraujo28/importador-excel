@@ -8,10 +8,12 @@ import {
   Loader2,
   PlusCircle,
   Save,
+  Trash2,
   Upload,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
+  deleteExtrato,
   listExtratos,
   updateExtratos,
   exportExtratosFile,
@@ -65,7 +67,10 @@ function hasAssignmentChanged(row: EditableExtratoRow) {
 }
 
 function hasAmountChanged(row: EditableExtratoRow) {
-  return normalizeCurrencyValue(row.amount) !== normalizeCurrencyValue(row.originalAmount);
+  return (
+    normalizeCurrencyValue(row.amount) !==
+    normalizeCurrencyValue(row.originalAmount)
+  );
 }
 
 function hasIgnoreDailySummaryChanged(row: EditableExtratoRow) {
@@ -109,6 +114,7 @@ export default function ExtratosPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isDeletingRowId, setIsDeletingRowId] = useState<string | null>(null);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(
@@ -121,6 +127,9 @@ export default function ExtratosPage() {
   const [isAccountIdDropdownOpen, setIsAccountIdDropdownOpen] = useState(false);
   const [isBankDropdownOpen, setIsBankDropdownOpen] = useState(false);
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
+  const [confirmDeleteRowId, setConfirmDeleteRowId] = useState<string | null>(
+    null,
+  );
 
   const accountIdDropdownRef = useRef<HTMLDivElement | null>(null);
   const bankDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -251,8 +260,9 @@ export default function ExtratosPage() {
         setIsBankDropdownOpen(false);
       }
 
-      if (!target?.closest("[data-row-menu-container='true']")) {
+      if (!target?.closest("[data-row-actions-container='true']")) {
         setOpenRowMenuId(null);
+        setConfirmDeleteRowId(null);
       }
     }
 
@@ -377,6 +387,54 @@ export default function ExtratosPage() {
           : row,
       ),
     );
+  }
+
+  function handleOpenDeleteConfirm(id: string) {
+    setOpenRowMenuId(null);
+    setConfirmDeleteRowId((current) => (current === id ? null : id));
+  }
+
+  async function handleDeleteRow(id: string) {
+    try {
+      setIsDeletingRowId(id);
+      setErrorMessage(null);
+      setSaveSuccessMessage(null);
+
+      const result = await deleteExtrato(id);
+
+      setRows((current) => current.filter((row) => row.id !== id));
+      setOpenRowMenuId(null);
+      setConfirmDeleteRowId(null);
+
+      setMeta((current) => {
+        const totalItems = Math.max(0, current.totalItems - 1);
+        const totalPages = Math.max(
+          1,
+          Math.ceil(totalItems / current.pageSize),
+        );
+
+        return {
+          ...current,
+          totalItems,
+          totalPages,
+          page: Math.min(current.page, totalPages),
+        };
+      });
+
+      if (rows.length === 1 && page > 1) {
+        setPage((current) => Math.max(1, current - 1));
+      }
+
+      setSaveSuccessMessage(
+        `${result.deletedCount} extrato(s) excluído(s) com sucesso.`,
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Erro ao excluir extrato.",
+      );
+    } finally {
+      setIsDeletingRowId(null);
+    }
   }
 
   async function handleSaveChanges() {
@@ -762,157 +820,219 @@ export default function ExtratosPage() {
                 </thead>
 
                 <tbody className="divide-y divide-gray-100">
-                  {rows.map((row) => (
-                    <tr key={row.id}>
-                      <td className="w-22.5 whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-800">
-                        {row.accountId}
-                      </td>
+                  {rows.map((row, rowIndex) => {
+                    const shouldOpenUpwards = rowIndex >= rows.length - 2;
 
-                      <td className="w-47.5 whitespace-nowrap px-4 py-4 text-sm text-gray-600">
-                        {row.bankName}
-                      </td>
+                    return (
+                      <tr key={row.id}>
+                        <td className="w-22.5 whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-800">
+                          {row.accountId}
+                        </td>
 
-                      <td className="w-32.5 whitespace-nowrap px-4 py-4 text-sm text-gray-600">
-                        {row.date}
-                      </td>
+                        <td className="w-47.5 whitespace-nowrap px-4 py-4 text-sm text-gray-600">
+                          {row.bankName}
+                        </td>
 
-                      <td className="w-full min-w-[320px] px-4 py-4 text-sm text-gray-700">
-                        <div className="space-y-1">
-                          <div>{row.description}</div>
-                          {row.ignoreDailySummary && (
-                            <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200">
-                              Fora do consolidado
-                            </span>
-                          )}
-                        </div>
-                      </td>
+                        <td className="w-32.5 whitespace-nowrap px-4 py-4 text-sm text-gray-600">
+                          {row.date}
+                        </td>
 
-                      <td className="w-52 px-4 py-4 text-sm font-medium text-gray-800">
-                        <div className="flex min-w-40 flex-col gap-2">
-                          {row.isEditingAmount ? (
-                            <>
-                              <NumericFormat
-                                value={row.draftAmount}
-                                thousandSeparator="."
-                                decimalSeparator=","
-                                prefix="R$ "
-                                decimalScale={2}
-                                allowNegative={false}
-                                className="w-full rounded-xl border px-3 py-2 text-sm font-medium"
-                                onValueChange={(values) =>
-                                  handleDraftAmountChange(
-                                    row.id,
-                                    values.floatValue,
-                                  )
-                                }
-                              />
-
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleCancelAmountEdit(row.id)}
-                                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
-                                >
-                                  Cancelar
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleConfirmAmountEdit(row.id)}
-                                  disabled={row.draftAmount === undefined}
-                                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  Confirmar
-                                </button>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <span
-                                className={
-                                  hasAmountChanged(row)
-                                    ? "text-blue-700"
-                                    : "text-gray-800"
-                                }
-                              >
-                                {formatCurrency(row.amount)}
+                        <td className="w-full min-w-[320px] px-4 py-4 text-sm text-gray-700">
+                          <div className="space-y-1">
+                            <div>{row.description}</div>
+                            {row.ignoreDailySummary && (
+                              <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200">
+                                Fora do consolidado
                               </span>
+                            )}
+                          </div>
+                        </td>
 
-                              <button
-                                type="button"
-                                onClick={() => handleStartAmountEdit(row.id)}
-                                className="w-fit text-xs font-medium text-blue-600 transition hover:text-blue-700"
-                              >
-                                Editar
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
+                        <td className="w-52 px-4 py-4 text-sm font-medium text-gray-800">
+                          <div className="flex min-w-40 flex-col gap-2">
+                            {row.isEditingAmount ? (
+                              <>
+                                <NumericFormat
+                                  value={row.draftAmount}
+                                  thousandSeparator="."
+                                  decimalSeparator=","
+                                  prefix="R$ "
+                                  decimalScale={2}
+                                  allowNegative={false}
+                                  className="w-full rounded-xl border px-3 py-2 text-sm font-medium"
+                                  onValueChange={(values) =>
+                                    handleDraftAmountChange(
+                                      row.id,
+                                      values.floatValue,
+                                    )
+                                  }
+                                />
 
-                      <td className="w-65 whitespace-nowrap px-4 py-4 text-sm">
-                        <select
-                          value={row.assignment}
-                          onChange={(event) =>
-                            handleAssignmentChange(
-                              row.id,
-                              event.target.value as Exclude<
-                                ExtractAssignment,
-                                "IGNORAR"
-                              >,
-                            )
-                          }
-                          className={`w-full min-w-55 rounded-xl border px-3 py-2 text-sm font-medium outline-none transition focus:ring-2 ${getAssignmentSelectClasses(
-                            row.assignment,
-                          )}`}
-                        >
-                          {assignmentOptions
-                            .filter((option) => option !== "TODAS")
-                            .map((option) => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                        </select>
-                      </td>
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleCancelAmountEdit(row.id)
+                                    }
+                                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
+                                  >
+                                    Cancelar
+                                  </button>
 
-                      <td className="w-14 whitespace-nowrap px-4 py-4 text-sm">
-                        <div
-                          className="relative flex justify-end"
-                          data-row-menu-container="true"
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setOpenRowMenuId((current) =>
-                                current === row.id ? null : row.id,
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleConfirmAmountEdit(row.id)
+                                    }
+                                    disabled={row.draftAmount === undefined}
+                                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    Confirmar
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <span
+                                  className={
+                                    hasAmountChanged(row)
+                                      ? "text-blue-700"
+                                      : "text-gray-800"
+                                  }
+                                >
+                                  {formatCurrency(row.amount)}
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartAmountEdit(row.id)}
+                                  className="w-fit text-xs font-medium text-blue-600 transition hover:text-blue-700"
+                                >
+                                  Editar
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="w-65 whitespace-nowrap px-4 py-4 text-sm">
+                          <select
+                            value={row.assignment}
+                            onChange={(event) =>
+                              handleAssignmentChange(
+                                row.id,
+                                event.target.value as Exclude<
+                                  ExtractAssignment,
+                                  "IGNORAR"
+                                >,
                               )
                             }
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
-                            aria-label="Mais opções"
+                            className={`w-full min-w-55 rounded-xl border px-3 py-2 text-sm font-medium outline-none transition focus:ring-2 ${getAssignmentSelectClasses(
+                              row.assignment,
+                            )}`}
                           >
-                            <Ellipsis size={16} />
-                          </button>
+                            {assignmentOptions
+                              .filter((option) => option !== "TODAS")
+                              .map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                          </select>
+                        </td>
 
-                          {openRowMenuId === row.id && (
-                            <div className="absolute right-0 z-20 mt-11 w-56 rounded-xl border border-gray-200 bg-white p-3 shadow-lg">
-                              <label className="flex cursor-pointer items-start gap-3 text-sm text-gray-700">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(row.ignoreDailySummary)}
-                                  onChange={() =>
-                                    handleToggleIgnoreDailySummary(row.id)
-                                  }
-                                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                <span>Não enviar para o consolidado</span>
-                              </label>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="w-40 whitespace-nowrap px-4 py-4 text-sm">
+                          <div
+                            className="relative flex justify-end gap-2"
+                            data-row-actions-container="true"
+                          >
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpenRowMenuId((current) => {
+                                  setConfirmDeleteRowId(null);
+                                  return current === row.id ? null : row.id;
+                                })
+                              }
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
+                              aria-label="Mais opções"
+                            >
+                              <Ellipsis size={16} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDeleteConfirm(row.id)}
+                              className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={isDeletingRowId === row.id}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+
+                            {openRowMenuId === row.id && (
+                              <div
+                                className={`absolute right-0 z-20 w-56 whitespace-normal rounded-xl border border-gray-200 bg-white p-3 shadow-lg ${
+                                  shouldOpenUpwards ? "bottom-11" : "top-11"
+                                }`}
+                              >
+                                <label className="flex cursor-pointer items-start gap-3 text-sm text-gray-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(row.ignoreDailySummary)}
+                                    onChange={() =>
+                                      handleToggleIgnoreDailySummary(row.id)
+                                    }
+                                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <span className="wrap-break-word leading-5">
+                                    Não enviar para o consolidado
+                                  </span>
+                                </label>
+                              </div>
+                            )}
+
+                            {confirmDeleteRowId === row.id && (
+                              <div
+                                className={`absolute right-0 z-30 w-72 whitespace-normal rounded-xl border border-red-200 bg-white p-4 shadow-lg ${
+                                  shouldOpenUpwards ? "bottom-11" : "top-11"
+                                }`}
+                              >
+                                <p className="text-sm font-semibold text-gray-800">
+                                  Excluir este lançamento?
+                                </p>
+                                <p className="mt-1 wrap-break-word text-xs leading-5 text-gray-500">
+                                  O lançamento será removido definitivamente.
+                                  Esta ação não pode ser desfeita.
+                                </p>
+
+                                <div className="mt-4 flex justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteRowId(null)}
+                                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
+                                    disabled={isDeletingRowId === row.id}
+                                  >
+                                    Cancelar
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteRow(row.id)}
+                                    className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    disabled={isDeletingRowId === row.id}
+                                  >
+                                    {isDeletingRowId === row.id
+                                      ? "Excluindo..."
+                                      : "Confirmar"}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -3,6 +3,7 @@ import type {
   CreateExtratosResponse,
   ConfirmExtractReviewPayload,
   ConfirmExtractReviewResponse,
+  DeleteExtratoResponse,
   ListExtratosParams,
   ListExtratosResponse,
   UpdateExtratosPayload,
@@ -145,6 +146,21 @@ export async function updateExtratos(
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new Error(data?.error ?? "Erro ao atualizar extratos");
+  }
+
+  return response.json();
+}
+
+export async function deleteExtrato(
+  id: string,
+): Promise<DeleteExtratoResponse> {
+  const response = await fetch(`${BASE_URL}/extratos/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error ?? "Erro ao excluir extrato");
   }
 
   return response.json();
