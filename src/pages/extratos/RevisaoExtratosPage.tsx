@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import {
   AlertCircle,
   ArrowLeft,
+  Ellipsis,
   FileSpreadsheet,
   Save,
   Trash2,
@@ -97,6 +98,7 @@ export default function RevisaoExtratosPage() {
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
   const [isAccountIdDropdownOpen, setIsAccountIdDropdownOpen] = useState(false);
+  const [openRowMenuIndex, setOpenRowMenuIndex] = useState<number | null>(null);
   const accountIdDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -105,11 +107,17 @@ export default function RevisaoExtratosPage() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement | null;
+
       if (
         accountIdDropdownRef.current &&
         !accountIdDropdownRef.current.contains(event.target as Node)
       ) {
         setIsAccountIdDropdownOpen(false);
+      }
+
+      if (!target?.closest("[data-row-menu-container='true']")) {
+        setOpenRowMenuIndex(null);
       }
     }
 
@@ -177,6 +185,22 @@ export default function RevisaoExtratosPage() {
 
   function handleRemoveRow(indexToRemove: number) {
     setRows((current) => current.filter((_, index) => index !== indexToRemove));
+    setOpenRowMenuIndex((current) =>
+      current === indexToRemove ? null : current,
+    );
+  }
+
+  function handleToggleIgnoreDailySummary(indexToUpdate: number) {
+    setRows((current) =>
+      current.map((row, index) =>
+        index === indexToUpdate
+          ? {
+              ...row,
+              ignoreDailySummary: !row.ignoreDailySummary,
+            }
+          : row,
+      ),
+    );
   }
 
   async function handleSaveReview() {
@@ -477,7 +501,14 @@ export default function RevisaoExtratosPage() {
                     </td>
 
                     <td className="w-full min-w-[320px] px-4 py-4 text-sm text-gray-700">
-                      {row.description}
+                      <div className="space-y-1">
+                        <div>{row.description}</div>
+                        {row.ignoreDailySummary && (
+                          <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200">
+                            Fora do consolidado
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="w-37.5 whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-800">
@@ -506,14 +537,52 @@ export default function RevisaoExtratosPage() {
                     </td>
 
                     <td className="w-35 whitespace-nowrap px-4 py-4 text-sm">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveRow(originalIndex)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100"
-                      >
-                        <Trash2 size={16} />
-                        Excluir
-                      </button>
+                      <div className="flex items-start justify-end gap-2">
+                        <div
+                          className="relative"
+                          data-row-menu-container="true"
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenRowMenuIndex((current) =>
+                                current === originalIndex ? null : originalIndex,
+                              )
+                            }
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
+                            aria-label="Mais opções"
+                          >
+                            <Ellipsis size={16} />
+                          </button>
+
+                          {openRowMenuIndex === originalIndex && (
+                            <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-gray-200 bg-white p-3 shadow-lg">
+                              <label className="flex cursor-pointer items-start gap-3 text-sm text-gray-700">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(row.ignoreDailySummary)}
+                                  onChange={() =>
+                                    handleToggleIgnoreDailySummary(originalIndex)
+                                  }
+                                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span>
+                                  Não enviar para o consolidado
+                                </span>
+                              </label>
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRow(originalIndex)}
+                          className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100"
+                        >
+                          <Trash2 size={16} />
+                          Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

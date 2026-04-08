@@ -18,6 +18,7 @@ export type ImportedTransaction = {
   date: string;
   description: string;
   amount: number;
+  ignoreDailySummary?: boolean;
   signal: ExtractSignal;
   assignment: ExtractAssignment;
 };
@@ -56,6 +57,7 @@ export type ExtratoListItem = {
   date: string;
   description: string;
   amount: number;
+  ignoreDailySummary?: boolean;
   signal: ExtractSignal;
   assignment: Exclude<ExtractAssignment, "IGNORAR">;
   createdAt: string;
@@ -91,6 +93,7 @@ export type UpdateExtratosPayload = {
     id: string;
     assignment: Exclude<ExtractAssignment, "IGNORAR">;
     amount?: number;
+    ignoreDailySummary?: boolean;
   }>;
 };
 

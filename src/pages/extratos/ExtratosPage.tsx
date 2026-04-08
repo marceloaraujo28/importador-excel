@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Ellipsis,
   Loader2,
   Save,
   Upload,
@@ -28,6 +29,7 @@ import {
 type EditableExtratoRow = ExtratoListItem & {
   originalAssignment: ExtratoListItem["assignment"];
   originalAmount: ExtratoListItem["amount"];
+  originalIgnoreDailySummary: boolean;
   draftAmount: ExtratoListItem["amount"] | undefined;
   isEditingAmount: boolean;
 };
@@ -63,6 +65,10 @@ function hasAssignmentChanged(row: EditableExtratoRow) {
 
 function hasAmountChanged(row: EditableExtratoRow) {
   return normalizeCurrencyValue(row.amount) !== normalizeCurrencyValue(row.originalAmount);
+}
+
+function hasIgnoreDailySummaryChanged(row: EditableExtratoRow) {
+  return Boolean(row.ignoreDailySummary) !== row.originalIgnoreDailySummary;
 }
 
 function getAssignmentSelectClasses(assignment: string) {
@@ -113,6 +119,7 @@ export default function ExtratosPage() {
 
   const [isAccountIdDropdownOpen, setIsAccountIdDropdownOpen] = useState(false);
   const [isBankDropdownOpen, setIsBankDropdownOpen] = useState(false);
+  const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
 
   const accountIdDropdownRef = useRef<HTMLDivElement | null>(null);
   const bankDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -131,7 +138,10 @@ export default function ExtratosPage() {
 
   const changedRows = useMemo(() => {
     return rows.filter(
-      (row) => hasAssignmentChanged(row) || hasAmountChanged(row),
+      (row) =>
+        hasAssignmentChanged(row) ||
+        hasAmountChanged(row) ||
+        hasIgnoreDailySummaryChanged(row),
     );
   }, [rows]);
 
@@ -167,6 +177,7 @@ export default function ExtratosPage() {
           ...item,
           originalAssignment: item.assignment,
           originalAmount: item.amount,
+          originalIgnoreDailySummary: Boolean(item.ignoreDailySummary),
           draftAmount: item.amount,
           isEditingAmount: false,
         })),
@@ -223,20 +234,24 @@ export default function ExtratosPage() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node;
+      const target = event.target as HTMLElement | null;
 
       if (
         accountIdDropdownRef.current &&
-        !accountIdDropdownRef.current.contains(target)
+        !accountIdDropdownRef.current.contains(target as Node)
       ) {
         setIsAccountIdDropdownOpen(false);
       }
 
       if (
         bankDropdownRef.current &&
-        !bankDropdownRef.current.contains(target)
+        !bankDropdownRef.current.contains(target as Node)
       ) {
         setIsBankDropdownOpen(false);
+      }
+
+      if (!target?.closest("[data-row-menu-container='true']")) {
+        setOpenRowMenuId(null);
       }
     }
 
@@ -350,6 +365,19 @@ export default function ExtratosPage() {
     );
   }
 
+  function handleToggleIgnoreDailySummary(id: string) {
+    setRows((current) =>
+      current.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              ignoreDailySummary: !row.ignoreDailySummary,
+            }
+          : row,
+      ),
+    );
+  }
+
   async function handleSaveChanges() {
     if (!changedRows.length) return;
 
@@ -363,6 +391,9 @@ export default function ExtratosPage() {
           id: row.id,
           assignment: row.assignment,
           ...(hasAmountChanged(row) ? { amount: row.amount } : {}),
+          ...(hasIgnoreDailySummaryChanged(row)
+            ? { ignoreDailySummary: Boolean(row.ignoreDailySummary) }
+            : {}),
         })),
       });
 
@@ -373,6 +404,7 @@ export default function ExtratosPage() {
                 ...row,
                 originalAssignment: row.assignment,
                 originalAmount: row.amount,
+                originalIgnoreDailySummary: Boolean(row.ignoreDailySummary),
                 draftAmount: row.amount,
                 isEditingAmount: false,
               }
@@ -715,6 +747,7 @@ export default function ExtratosPage() {
                     <th className="px-4 py-3 font-medium">Histórico</th>
                     <th className="px-4 py-3 font-medium">Valor</th>
                     <th className="px-4 py-3 font-medium">Atribuição</th>
+                    <th className="px-4 py-3 font-medium"></th>
                   </tr>
                 </thead>
 
@@ -734,7 +767,14 @@ export default function ExtratosPage() {
                       </td>
 
                       <td className="w-full min-w-[320px] px-4 py-4 text-sm text-gray-700">
-                        {row.description}
+                        <div className="space-y-1">
+                          <div>{row.description}</div>
+                          {row.ignoreDailySummary && (
+                            <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200">
+                              Fora do consolidado
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="w-52 px-4 py-4 text-sm font-medium text-gray-800">
@@ -824,6 +864,42 @@ export default function ExtratosPage() {
                               </option>
                             ))}
                         </select>
+                      </td>
+
+                      <td className="w-14 whitespace-nowrap px-4 py-4 text-sm">
+                        <div
+                          className="relative flex justify-end"
+                          data-row-menu-container="true"
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenRowMenuId((current) =>
+                                current === row.id ? null : row.id,
+                              )
+                            }
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
+                            aria-label="Mais opções"
+                          >
+                            <Ellipsis size={16} />
+                          </button>
+
+                          {openRowMenuId === row.id && (
+                            <div className="absolute right-0 z-20 mt-11 w-56 rounded-xl border border-gray-200 bg-white p-3 shadow-lg">
+                              <label className="flex cursor-pointer items-start gap-3 text-sm text-gray-700">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(row.ignoreDailySummary)}
+                                  onChange={() =>
+                                    handleToggleIgnoreDailySummary(row.id)
+                                  }
+                                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span>Não enviar para o consolidado</span>
+                              </label>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
