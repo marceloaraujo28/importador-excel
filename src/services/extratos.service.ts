@@ -1,4 +1,6 @@
 import type {
+  CreateExtratosPayload,
+  CreateExtratosResponse,
   ConfirmExtractReviewPayload,
   ConfirmExtractReviewResponse,
   ListExtratosParams,
@@ -45,6 +47,25 @@ export async function confirmExtractReview(
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new Error(data?.error ?? "Erro ao salvar revisão dos extratos");
+  }
+
+  return response.json();
+}
+
+export async function createExtratos(
+  payload: CreateExtratosPayload,
+): Promise<CreateExtratosResponse> {
+  const response = await fetch(`${BASE_URL}/extratos`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error ?? "Erro ao salvar extratos");
   }
 
   return response.json();

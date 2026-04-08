@@ -40,14 +40,22 @@ export type UploadExtractFilesResponse = {
   files: ImportedFileResult[];
 };
 
-export type ConfirmExtractReviewPayload = {
+export type SaveExtratosPayload = {
   transactions: ImportedTransaction[];
 };
 
-export type ConfirmExtractReviewResponse = {
+export type SaveExtratosResponse = {
   message: string;
   savedCount?: number;
 };
+
+export type ConfirmExtractReviewPayload = SaveExtratosPayload;
+
+export type ConfirmExtractReviewResponse = SaveExtratosResponse;
+
+export type CreateExtratosPayload = SaveExtratosPayload;
+
+export type CreateExtratosResponse = SaveExtratosResponse;
 
 export type ExtratoListItem = {
   id: string;

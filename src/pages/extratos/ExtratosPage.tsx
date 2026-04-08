@@ -6,6 +6,7 @@ import {
   Download,
   Ellipsis,
   Loader2,
+  PlusCircle,
   Save,
   Upload,
 } from "lucide-react";
@@ -475,6 +476,15 @@ export default function ExtratosPage() {
                 Exportar
               </>
             )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate("/extratos/novo")}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 sm:w-auto"
+          >
+            <PlusCircle size={16} />
+            Novo lançamento
           </button>
 
           <button
