@@ -39,6 +39,7 @@ export type DashboardAccount = {
   outputs: number;
   fees: number;
   yields: number;
+  monthlyYields: number;
   rescues: number;
   applications: number;
   transferEcIn: number;

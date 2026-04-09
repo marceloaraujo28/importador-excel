@@ -5,6 +5,7 @@ export type ExtractAssignment =
   | "APLICAÇÕES"
   | "RESGATES"
   | "RENDIMENTOS"
+  | "RENDIMENTO MENSAL"
   | "TRANSFERÊNCIA EC"
   | "IGNORAR"
   | "OUTROS";

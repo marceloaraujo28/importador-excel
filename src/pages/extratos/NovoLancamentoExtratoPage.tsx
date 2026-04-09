@@ -15,6 +15,7 @@ const assignmentOptions: Array<Exclude<ExtractAssignment, "IGNORAR">> = [
   "TARIFAS",
   "APLICAÇÕES",
   "RENDIMENTOS",
+  "RENDIMENTO MENSAL",
   "RESGATES",
   "TRANSFERÊNCIA EC",
   "OUTROS",
@@ -31,6 +32,8 @@ function getAssignmentSelectClasses(assignment: string) {
     case "APLICAÇÕES":
       return "border-blue-200 bg-blue-50 text-blue-700 focus:border-blue-500 focus:ring-blue-100";
     case "RENDIMENTOS":
+      return "border-green-500 bg-green-100 text-green-800 focus:border-green-800 focus:ring-green-200";
+    case "RENDIMENTO MENSAL":
       return "border-green-500 bg-green-100 text-green-800 focus:border-green-800 focus:ring-green-200";
     case "RESGATES":
       return "border-purple-200 bg-purple-50 text-purple-700 focus:border-purple-500 focus:ring-purple-100";
@@ -58,6 +61,7 @@ function getSignalForAssignment(
   switch (assignment) {
     case "ENTRADAS":
     case "RENDIMENTOS":
+    case "RENDIMENTO MENSAL":
     case "RESGATES":
       return "C";
     case "SAÍDAS":

@@ -945,7 +945,13 @@ export default function DashboardPage() {
                         <td className="px-3 py-3 text-gray-500">-</td>
                         <td className="px-3 py-3 text-gray-500">-</td>
                         <td className="px-3 py-3 text-gray-500">-</td>
-                        <td className="px-3 py-3 text-gray-500">-</td>
+                        <td
+                          className={`px-3 py-3 ${getPositiveValueColor(
+                            account.monthlyYields, // aquiiiii
+                          )}`}
+                        >
+                          {formatCurrencyOrDash(account.monthlyYields)}
+                        </td>
 
                         <td
                           className={`px-3 py-3 ${getNegativeValueColor(
