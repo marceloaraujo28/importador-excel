@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   AlertCircle,
   ArrowLeft,
+  Ellipsis,
   FileSpreadsheet,
   Save,
   Trash2,
+  ChevronDown,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { confirmExtractReview } from "../../services/extratos.service";
@@ -23,6 +25,7 @@ const assignmentOptions: ExtractAssignment[] = [
   "SAÍDAS",
   "TARIFAS",
   "APLICAÇÕES",
+  "RENDIMENTOS",
   "RESGATES",
   "TRANSFERÊNCIA EC",
   "OUTROS",
@@ -55,6 +58,8 @@ function getAssignmentSelectClasses(assignment: string) {
       return "border-amber-200 bg-amber-50 text-amber-700 focus:border-amber-500 focus:ring-amber-100";
     case "APLICAÇÕES":
       return "border-blue-200 bg-blue-50 text-blue-700 focus:border-blue-500 focus:ring-blue-100";
+    case "RENDIMENTOS":
+      return "border-green-500 bg-green-100 text-green-800 focus:border-green-800 focus:ring-green-200";
     case "RESGATES":
       return "border-purple-200 bg-purple-50 text-purple-700 focus:border-purple-500 focus:ring-purple-100";
     case "TRANSFERÊNCIA EC":
@@ -91,16 +96,53 @@ export default function RevisaoExtratosPage() {
   const [dateOrder, setDateOrder] = useState<"DESC" | "ASC">("DESC");
   const [isSaving, setIsSaving] = useState(false);
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
+  const [isAccountIdDropdownOpen, setIsAccountIdDropdownOpen] = useState(false);
+  const [openRowMenuIndex, setOpenRowMenuIndex] = useState<number | null>(null);
+  const accountIdDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setRows(initialRows);
   }, [initialRows]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement | null;
+
+      if (
+        accountIdDropdownRef.current &&
+        !accountIdDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsAccountIdDropdownOpen(false);
+      }
+
+      if (!target?.closest("[data-row-menu-container='true']")) {
+        setOpenRowMenuIndex(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const accountIdOptions = useMemo(() => {
+    return Array.from(new Set(rows.map((row) => row.accountId))).sort();
+  }, [rows]);
 
   const filteredRows = useMemo(() => {
     let result = [...rows];
 
     if (assignmentFilter !== "TODAS") {
       result = result.filter((row) => row.assignment === assignmentFilter);
+    }
+
+    if (selectedAccountIds.length > 0) {
+      result = result.filter((row) =>
+        selectedAccountIds.includes(row.accountId),
+      );
     }
 
     result.sort((a, b) => {
@@ -111,7 +153,7 @@ export default function RevisaoExtratosPage() {
     });
 
     return result;
-  }, [rows, assignmentFilter, dateOrder]);
+  }, [rows, assignmentFilter, dateOrder, selectedAccountIds]);
 
   function handleAssignmentChange(
     indexToUpdate: number,
@@ -129,8 +171,36 @@ export default function RevisaoExtratosPage() {
     );
   }
 
+  function handleToggleAccountId(accountId: string) {
+    setSelectedAccountIds((current) =>
+      current.includes(accountId)
+        ? current.filter((id) => id !== accountId)
+        : [...current, accountId],
+    );
+  }
+
+  function handleClearAccountIdFilter() {
+    setSelectedAccountIds([]);
+  }
+
   function handleRemoveRow(indexToRemove: number) {
     setRows((current) => current.filter((_, index) => index !== indexToRemove));
+    setOpenRowMenuIndex((current) =>
+      current === indexToRemove ? null : current,
+    );
+  }
+
+  function handleToggleIgnoreDailySummary(indexToUpdate: number) {
+    setRows((current) =>
+      current.map((row, index) =>
+        index === indexToUpdate
+          ? {
+              ...row,
+              ignoreDailySummary: !row.ignoreDailySummary,
+            }
+          : row,
+      ),
+    );
   }
 
   async function handleSaveReview() {
@@ -287,7 +357,72 @@ export default function RevisaoExtratosPage() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div ref={accountIdDropdownRef} className="relative">
+              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+                Filtrar por ID
+              </label>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setIsAccountIdDropdownOpen((current) => !current)
+                }
+                className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition hover:border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                <span className="truncate text-left">
+                  {selectedAccountIds.length === 0
+                    ? "Todos os IDs"
+                    : `${selectedAccountIds.length} ID(s) selecionado(s)`}
+                </span>
+
+                <ChevronDown
+                  size={16}
+                  className={`shrink-0 transition ${
+                    isAccountIdDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {isAccountIdDropdownOpen && (
+                <div className="absolute z-20 mt-2 w-full rounded-2xl border border-gray-200 bg-white p-2 shadow-lg">
+                  <div className="max-h-64 overflow-y-auto">
+                    {accountIdOptions.map((accountId) => {
+                      const checked = selectedAccountIds.includes(accountId);
+
+                      return (
+                        <label
+                          key={accountId}
+                          className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => handleToggleAccountId(accountId)}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span>{accountId}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between border-t border-gray-100 px-2 pt-2">
+                    <span className="text-xs text-gray-500">
+                      {selectedAccountIds.length} selecionado(s)
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={handleClearAccountIdFilter}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <div>
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
                 Filtrar atribuição
@@ -366,7 +501,14 @@ export default function RevisaoExtratosPage() {
                     </td>
 
                     <td className="w-full min-w-[320px] px-4 py-4 text-sm text-gray-700">
-                      {row.description}
+                      <div className="space-y-1">
+                        <div>{row.description}</div>
+                        {row.ignoreDailySummary && (
+                          <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200">
+                            Fora do consolidado
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="w-37.5 whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-800">
@@ -395,14 +537,52 @@ export default function RevisaoExtratosPage() {
                     </td>
 
                     <td className="w-35 whitespace-nowrap px-4 py-4 text-sm">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveRow(originalIndex)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100"
-                      >
-                        <Trash2 size={16} />
-                        Excluir
-                      </button>
+                      <div className="flex items-start justify-end gap-2">
+                        <div
+                          className="relative"
+                          data-row-menu-container="true"
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenRowMenuIndex((current) =>
+                                current === originalIndex ? null : originalIndex,
+                              )
+                            }
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
+                            aria-label="Mais opções"
+                          >
+                            <Ellipsis size={16} />
+                          </button>
+
+                          {openRowMenuIndex === originalIndex && (
+                            <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-gray-200 bg-white p-3 shadow-lg">
+                              <label className="flex cursor-pointer items-start gap-3 text-sm text-gray-700">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(row.ignoreDailySummary)}
+                                  onChange={() =>
+                                    handleToggleIgnoreDailySummary(originalIndex)
+                                  }
+                                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span>
+                                  Não enviar para o consolidado
+                                </span>
+                              </label>
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRow(originalIndex)}
+                          className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100"
+                        >
+                          <Trash2 size={16} />
+                          Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

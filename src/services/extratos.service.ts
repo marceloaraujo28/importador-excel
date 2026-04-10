@@ -1,6 +1,9 @@
 import type {
+  CreateExtratosPayload,
+  CreateExtratosResponse,
   ConfirmExtractReviewPayload,
   ConfirmExtractReviewResponse,
+  DeleteExtratoResponse,
   ListExtratosParams,
   ListExtratosResponse,
   UpdateExtratosPayload,
@@ -50,6 +53,25 @@ export async function confirmExtractReview(
   return response.json();
 }
 
+export async function createExtratos(
+  payload: CreateExtratosPayload,
+): Promise<CreateExtratosResponse> {
+  const response = await fetch(`${BASE_URL}/extratos`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error ?? "Erro ao salvar extratos");
+  }
+
+  return response.json();
+}
+
 export async function listExtratos(
   params: ListExtratosParams = {},
 ): Promise<ListExtratosResponse> {
@@ -65,6 +87,22 @@ export async function listExtratos(
 
   if (params.assignment) {
     searchParams.set("assignment", params.assignment);
+  }
+
+  if (params.value !== undefined) {
+    searchParams.set("amount", String(params.value));
+  }
+
+  if (params.accountIds?.length) {
+    for (const accountId of params.accountIds) {
+      searchParams.append("accountId", accountId);
+    }
+  }
+
+  if (params.bankNames?.length) {
+    for (const bankName of params.bankNames) {
+      searchParams.append("bankName", bankName);
+    }
   }
 
   if (params.dateFrom) {
@@ -108,6 +146,21 @@ export async function updateExtratos(
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new Error(data?.error ?? "Erro ao atualizar extratos");
+  }
+
+  return response.json();
+}
+
+export async function deleteExtrato(
+  id: string,
+): Promise<DeleteExtratoResponse> {
+  const response = await fetch(`${BASE_URL}/extratos/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error ?? "Erro ao excluir extrato");
   }
 
   return response.json();

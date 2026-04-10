@@ -4,6 +4,8 @@ export type ExtractAssignment =
   | "TARIFAS"
   | "APLICAÇÕES"
   | "RESGATES"
+  | "RENDIMENTOS"
+  | "RENDIMENTO MENSAL"
   | "TRANSFERÊNCIA EC"
   | "IGNORAR"
   | "OUTROS";
@@ -17,6 +19,7 @@ export type ImportedTransaction = {
   date: string;
   description: string;
   amount: number;
+  ignoreDailySummary?: boolean;
   signal: ExtractSignal;
   assignment: ExtractAssignment;
 };
@@ -38,14 +41,22 @@ export type UploadExtractFilesResponse = {
   files: ImportedFileResult[];
 };
 
-export type ConfirmExtractReviewPayload = {
+export type SaveExtratosPayload = {
   transactions: ImportedTransaction[];
 };
 
-export type ConfirmExtractReviewResponse = {
+export type SaveExtratosResponse = {
   message: string;
   savedCount?: number;
 };
+
+export type ConfirmExtractReviewPayload = SaveExtratosPayload;
+
+export type ConfirmExtractReviewResponse = SaveExtratosResponse;
+
+export type CreateExtratosPayload = SaveExtratosPayload;
+
+export type CreateExtratosResponse = SaveExtratosResponse;
 
 export type ExtratoListItem = {
   id: string;
@@ -55,6 +66,7 @@ export type ExtratoListItem = {
   date: string;
   description: string;
   amount: number;
+  ignoreDailySummary?: boolean;
   signal: ExtractSignal;
   assignment: Exclude<ExtractAssignment, "IGNORAR">;
   createdAt: string;
@@ -80,16 +92,26 @@ export type ListExtratosParams = {
   dateFrom?: string;
   dateTo?: string;
   dateOrder?: "asc" | "desc";
+  value?: number;
+  accountIds?: string[];
+  bankNames?: string[];
 };
 
 export type UpdateExtratosPayload = {
   updates: Array<{
     id: string;
     assignment: Exclude<ExtractAssignment, "IGNORAR">;
+    amount?: number;
+    ignoreDailySummary?: boolean;
   }>;
 };
 
 export type UpdateExtratosResponse = {
   message: string;
   updatedCount: number;
+};
+
+export type DeleteExtratoResponse = {
+  message: string;
+  deletedCount: number;
 };

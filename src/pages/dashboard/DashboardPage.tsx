@@ -395,10 +395,17 @@ export default function DashboardPage() {
   }, [companies]);
 
   const detailedCompanyOptions = useMemo(() => {
-    return [...companies].map((company) => company.name);
+    const companiesName = [...companies].map((company) => company.name);
+    const finalOptions = ["Todas as empresas", ...companiesName];
+
+    return finalOptions;
   }, [companies]);
 
   const detailedAccounts = useMemo(() => {
+    if (selectedCompanyName === "Todas as empresas") {
+      return accounts;
+    }
+
     return accounts.filter(
       (account) => account.companyName === selectedCompanyName,
     );
@@ -443,7 +450,7 @@ export default function DashboardPage() {
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-gray-50 p-3 sm:flex-row">
-            <div className="min-w-[160px]">
+            <div className="min-w-40">
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
                 Data inicial
               </label>
@@ -455,7 +462,7 @@ export default function DashboardPage() {
               />
             </div>
 
-            <div className="min-w-[160px]">
+            <div className="min-w-40">
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
                 Data final
               </label>
@@ -564,7 +571,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-gradient-to-r from-white to-gray-50 p-6">
+          <div className="rounded-2xl border border-gray-200 bg-linear-to-r from-white to-gray-50 p-6">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
                 <h3 className="text-2xl font-bold text-gray-900">
@@ -938,7 +945,13 @@ export default function DashboardPage() {
                         <td className="px-3 py-3 text-gray-500">-</td>
                         <td className="px-3 py-3 text-gray-500">-</td>
                         <td className="px-3 py-3 text-gray-500">-</td>
-                        <td className="px-3 py-3 text-gray-500">-</td>
+                        <td
+                          className={`px-3 py-3 ${getPositiveValueColor(
+                            account.monthlyYields, // aquiiiii
+                          )}`}
+                        >
+                          {formatCurrencyOrDash(account.monthlyYields)}
+                        </td>
 
                         <td
                           className={`px-3 py-3 ${getNegativeValueColor(
