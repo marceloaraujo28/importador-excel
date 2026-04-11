@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Loader2, Save, Search } from "lucide-react";
+import { NumericFormat } from "react-number-format";
 import {
   listOpeningBalances,
   updateOpeningBalance,
@@ -17,25 +18,6 @@ function formatCurrency(value: number) {
     style: "currency",
     currency: "BRL",
   }).format(value);
-}
-
-function parseCurrencyInput(value: string): number {
-  if (!value.trim()) return 0;
-
-  const normalized = value
-    .replace(/\./g, "")
-    .replace(",", ".")
-    .replace(/[^\d.-]/g, "");
-
-  const parsed = Number(normalized);
-  return Number.isNaN(parsed) ? 0 : parsed;
-}
-
-function formatInputNumber(value: number) {
-  return value.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 }
 
 export default function OpeningBalancesPage() {
@@ -140,19 +122,19 @@ export default function OpeningBalancesPage() {
     }));
   }
 
-  function handleAvailableChange(accountId: string, value: string) {
+  function handleAvailableChange(accountId: string, value?: number) {
     updateRow(accountId, (row) => ({
       ...row,
-      initialAvailable: parseCurrencyInput(value),
+      initialAvailable: value ?? 0,
       successMessage: null,
       errorMessage: null,
     }));
   }
 
-  function handleApplicationChange(accountId: string, value: string) {
+  function handleApplicationChange(accountId: string, value?: number) {
     updateRow(accountId, (row) => ({
       ...row,
-      initialApplication: parseCurrencyInput(value),
+      initialApplication: value ?? 0,
       successMessage: null,
       errorMessage: null,
     }));
@@ -371,24 +353,32 @@ export default function OpeningBalancesPage() {
                   </td>
 
                   <td className="px-4 py-4 text-sm">
-                    <input
-                      type="text"
-                      value={formatInputNumber(row.initialAvailable)}
-                      onChange={(event) =>
-                        handleAvailableChange(row.accountId, event.target.value)
+                    <NumericFormat
+                      value={row.initialAvailable}
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      prefix="R$ "
+                      decimalScale={2}
+                      allowNegative={false}
+                      onValueChange={(values) =>
+                        handleAvailableChange(row.accountId, values.floatValue)
                       }
                       className="w-full min-w-40 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                   </td>
 
                   <td className="px-4 py-4 text-sm">
-                    <input
-                      type="text"
-                      value={formatInputNumber(row.initialApplication)}
-                      onChange={(event) =>
+                    <NumericFormat
+                      value={row.initialApplication}
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      prefix="R$ "
+                      decimalScale={2}
+                      allowNegative={false}
+                      onValueChange={(values) =>
                         handleApplicationChange(
                           row.accountId,
-                          event.target.value,
+                          values.floatValue,
                         )
                       }
                       className="w-full min-w-40 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"

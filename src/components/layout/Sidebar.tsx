@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, FileText, X } from "lucide-react";
+import { LayoutDashboard, FileText, FolderKanban, X } from "lucide-react";
 import clsx from "clsx";
 
 type SidebarProps = {
@@ -82,6 +82,20 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           >
             <FileText size={18} />
             Saldos Iniciais
+          </NavLink>
+
+          <NavLink
+            to="/consolidado-manual"
+            onClick={onClose}
+            className={({ isActive }) =>
+              clsx(
+                "flex items-center gap-3 px-4 py-2 rounded-lg transition",
+                isActive ? "bg-blue-600" : "text-gray-300 hover:bg-white/10",
+              )
+            }
+          >
+            <FolderKanban size={18} />
+            Consolidado manual
           </NavLink>
         </nav>
       </aside>
