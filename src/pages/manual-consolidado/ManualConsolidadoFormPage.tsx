@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Loader2, PlusCircle, Save } from "lucide-react";
 import { NumericFormat } from "react-number-format";
 import { useNavigate, useParams } from "react-router-dom";
@@ -277,20 +277,20 @@ export default function ManualConsolidadoFormPage() {
 
           <div className="md:col-span-2">
             <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-              Descricao
+              Histórico
             </label>
             <input
               type="text"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Descreva o lancamento"
+              placeholder="Descreva o histórico"
               className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
           <div>
             <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-              Classificacao
+              Atribuição
             </label>
             <select
               value={assignment}
@@ -406,3 +406,4 @@ export default function ManualConsolidadoFormPage() {
     </div>
   );
 }
+

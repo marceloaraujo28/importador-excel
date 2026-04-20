@@ -92,8 +92,10 @@ export async function listManualConsolidadoEntries(
     searchParams.set("description", params.description);
   }
 
-  if (params.assignment) {
-    searchParams.set("assignment", params.assignment);
+  if (params.assignment?.length) {
+    for (const assignment of params.assignment) {
+      searchParams.append("assignment", assignment);
+    }
   }
 
   if (params.status) {

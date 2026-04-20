@@ -74,6 +74,7 @@ export type ManualConsolidadoEntriesMeta = {
   pageSize: number;
   totalItems: number;
   totalPages: number;
+  filteredAmount: number;
 };
 
 export type ManualConsolidadoEntriesResponse = {
@@ -96,7 +97,7 @@ export type ManualConsolidadoEntryFilters = {
   dateOrder?: "asc" | "desc";
   amount?: number;
   description?: string;
-  assignment?: ManualConsolidadoAssignment;
+  assignment?: ManualConsolidadoAssignment[];
   status?: ManualConsolidadoStatusFilter;
 };
 

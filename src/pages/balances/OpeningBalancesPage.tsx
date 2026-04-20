@@ -20,6 +20,15 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+function formatBankName(value: string) {
+  return value
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 export default function OpeningBalancesPage() {
   const [rows, setRows] = useState<EditableOpeningBalanceRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -338,7 +347,7 @@ export default function OpeningBalancesPage() {
                   </td>
 
                   <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
-                    {row.bankName}
+                    {formatBankName(row.bankName)}
                   </td>
 
                   <td className="px-4 py-4 text-sm">

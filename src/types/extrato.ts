@@ -91,7 +91,8 @@ export type ListExtratosParams = {
   assignment?: Exclude<ExtractAssignment, "IGNORAR">;
   dateFrom?: string;
   dateTo?: string;
-  dateOrder?: "asc" | "desc";
+  amountOrder?: "asc" | "desc" | "";
+  description?: string;
   value?: number;
   accountIds?: string[];
   bankNames?: string[];

@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   CalendarRange,
-  ChevronDown,
   Loader2,
   Pencil,
   PlusCircle,
@@ -10,10 +9,7 @@ import {
 } from "lucide-react";
 import { NumericFormat } from "react-number-format";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  ACCOUNT_FILTER_ITEMS,
-  type AccountFilterItem,
-} from "../../constants/account-filters";
+import { ACCOUNT_FILTER_ITEMS } from "../../constants/account-filters";
 import {
   getManualConsolidadoAssignmentClasses,
   getManualConsolidadoAssignmentLabel,
@@ -23,6 +19,7 @@ import {
   MANUAL_CONSOLIDADO_STATUS_FILTER_OPTIONS,
   MANUAL_CONSOLIDADO_STATUS_OPTIONS,
 } from "../../constants/manual-consolidado";
+import CheckboxMultiSelect from "../../components/filters/CheckboxMultiSelect";
 import {
   deleteManualConsolidadoEntry,
   getManualConsolidadoDashboard,
@@ -40,12 +37,6 @@ import type {
 
 type ManualConsolidadoTab = "resumo" | "registros";
 
-type AccountMultiSelectProps = {
-  label: string;
-  selectedIds: string[];
-  onChange: (value: string[]) => void;
-};
-
 type ActiveSummaryFiltersState = {
   accountIds: string[];
   dateFrom?: string;
@@ -61,16 +52,17 @@ type ActiveEntryFiltersState = {
   dateTo?: string;
   amount?: number;
   description?: string;
-  assignment?: ManualConsolidadoAssignment;
+  assignment?: ManualConsolidadoAssignment[];
   status: ManualConsolidadoStatusFilter;
   dateOrder: "asc" | "desc";
 };
 
 const DEFAULT_ENTRIES_META: ManualConsolidadoEntriesMeta = {
   page: 1,
-  pageSize: 20,
+  pageSize: 50,
   totalItems: 0,
   totalPages: 1,
+  filteredAmount: 0,
 };
 
 function getTodayInputValue() {
@@ -85,6 +77,12 @@ function getTodayInputValue() {
 
 function isDateAfter(dateA: string, dateB: string) {
   return Boolean(dateA && dateB && dateA > dateB);
+}
+
+function isTransferDirectionCredit(
+  direction: ManualConsolidadoEntry["transferDirection"],
+) {
+  return direction === "ENTRADA";
 }
 
 function formatCurrency(value: number) {
@@ -122,128 +120,6 @@ function getSignedValueColor(value: number) {
 }
 
 const VALUE_CELL_CLASS = "px-3 py-3 whitespace-nowrap text-right tabular-nums";
-
-function buildAccountButtonLabel(selectedIds: string[]) {
-  if (!selectedIds.length) {
-    return "Todos os IDs";
-  }
-
-  if (selectedIds.length === 1) {
-    return selectedIds[0];
-  }
-
-  return `${selectedIds.length} IDs selecionados`;
-}
-
-function AccountMultiSelect({
-  label,
-  selectedIds,
-  onChange,
-}: AccountMultiSelectProps) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  const sortedAccounts = useMemo(
-    () =>
-      [...ACCOUNT_FILTER_ITEMS].sort((a, b) => a.code.localeCompare(b.code)),
-    [],
-  );
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target;
-
-      if (
-        target instanceof Node &&
-        containerRef.current &&
-        !containerRef.current.contains(target)
-      ) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  function handleToggleAccount(accountId: string) {
-    if (selectedIds.includes(accountId)) {
-      onChange(selectedIds.filter((item) => item !== accountId));
-      return;
-    }
-
-    onChange([...selectedIds, accountId].sort((a, b) => a.localeCompare(b)));
-  }
-
-  return (
-    <div ref={containerRef} className="relative">
-      <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-        {label}
-      </label>
-
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-left text-sm text-gray-700 outline-none transition hover:border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-      >
-        <span className="truncate">{buildAccountButtonLabel(selectedIds)}</span>
-        <ChevronDown size={16} className="text-gray-400" />
-      </button>
-
-      {open && (
-        <div className="absolute z-20 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-200 bg-white p-3 shadow-lg">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                onChange(sortedAccounts.map((account) => account.code))
-              }
-              className="text-xs font-medium text-blue-600 transition hover:text-blue-700"
-            >
-              Selecionar todos
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onChange([])}
-              className="text-xs font-medium text-gray-500 transition hover:text-gray-700"
-            >
-              Limpar
-            </button>
-          </div>
-
-          <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-            {sortedAccounts.map((account) => (
-              <label
-                key={account.code}
-                className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-100 px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-50"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(account.code)}
-                  onChange={() => handleToggleAccount(account.code)}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-
-                <span className="min-w-0">
-                  <span className="block font-medium text-gray-900">
-                    {account.code}
-                  </span>
-                  <span className="block truncate text-xs text-gray-500">
-                    {account.companyName}
-                  </span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function ManualConsolidadoPage() {
   const navigate = useNavigate();
@@ -292,8 +168,8 @@ export default function ManualConsolidadoPage() {
   >(undefined);
   const [entriesDescriptionInput, setEntriesDescriptionInput] = useState("");
   const [entriesAssignmentInput, setEntriesAssignmentInput] = useState<
-    ManualConsolidadoAssignment | ""
-  >("");
+    ManualConsolidadoAssignment[]
+  >([]);
   const [entriesStatusInput, setEntriesStatusInput] =
     useState<ManualConsolidadoStatusFilter>("TODOS");
   const [entriesDateOrderInput, setEntriesDateOrderInput] = useState<
@@ -308,7 +184,7 @@ export default function ManualConsolidadoPage() {
       dateTo: undefined as string | undefined,
       amount: undefined as number | undefined,
       description: undefined as string | undefined,
-      assignment: undefined as ManualConsolidadoAssignment | undefined,
+      assignment: undefined as ManualConsolidadoAssignment[] | undefined,
       status: "TODOS" as ManualConsolidadoStatusFilter,
       dateOrder: "desc" as "asc" | "desc",
     });
@@ -347,7 +223,9 @@ export default function ManualConsolidadoPage() {
       dateTo: entriesDateToInput || undefined,
       amount: entriesAmountInput,
       description: entriesDescriptionInput.trim() || undefined,
-      assignment: entriesAssignmentInput || undefined,
+      assignment: entriesAssignmentInput.length
+        ? entriesAssignmentInput
+        : undefined,
       status: entriesStatusInput,
       dateOrder: entriesDateOrderInput,
     }),
@@ -363,6 +241,20 @@ export default function ManualConsolidadoPage() {
       entriesMeta.pageSize,
       entriesStatusInput,
     ],
+  );
+
+  const hasAppliedEntryFilters = useMemo(
+    () =>
+      Boolean(
+        activeEntryFilters.accountIds.length ||
+        activeEntryFilters.dateFrom ||
+        activeEntryFilters.dateTo ||
+        activeEntryFilters.amount !== undefined ||
+        activeEntryFilters.description ||
+        activeEntryFilters.assignment?.length ||
+        activeEntryFilters.status !== "TODOS",
+      ),
+    [activeEntryFilters],
   );
 
   useEffect(() => {
@@ -426,7 +318,7 @@ export default function ManualConsolidadoPage() {
       setEntriesErrorMessage(
         error instanceof Error
           ? error.message
-          : "Erro ao carregar lancamentos do consolidado manual.",
+          : "Erro ao carregar lanÃ§amentos do consolidado manual.",
       );
     } finally {
       setIsEntriesLoading(false);
@@ -452,6 +344,33 @@ export default function ManualConsolidadoPage() {
     }));
 
     await loadEntries(nextFilters);
+  }
+
+  async function handleClearEntryFilters() {
+    const clearedFilters = {
+      page: activeEntryFilters.page,
+      pageSize: activeEntryFilters.pageSize,
+      accountIds: [] as string[],
+      dateFrom: undefined as string | undefined,
+      dateTo: undefined as string | undefined,
+      amount: undefined as number | undefined,
+      description: undefined as string | undefined,
+      assignment: undefined as ManualConsolidadoAssignment[] | undefined,
+      status: "TODOS" as ManualConsolidadoStatusFilter,
+      dateOrder: "desc" as "asc" | "desc",
+    };
+
+    setEntriesAccountIdsInput([]);
+    setEntriesDateFromInput("");
+    setEntriesDateToInput("");
+    setEntriesAmountInput(undefined);
+    setEntriesDescriptionInput("");
+    setEntriesAssignmentInput([]);
+    setEntriesStatusInput("TODOS");
+    setEntriesDateOrderInput("desc");
+    setActiveEntryFilters(clearedFilters);
+
+    await loadEntries(clearedFilters);
   }
 
   async function handleChangeEntriesPage(nextPage: number) {
@@ -488,7 +407,7 @@ export default function ManualConsolidadoPage() {
       setEntriesErrorMessage(
         error instanceof Error
           ? error.message
-          : "Erro ao atualizar status do lancamento manual.",
+          : "Erro ao atualizar status do lanÃ§amento manual.",
       );
     } finally {
       setStatusUpdatingId(null);
@@ -525,7 +444,7 @@ export default function ManualConsolidadoPage() {
       setEntriesErrorMessage(
         error instanceof Error
           ? error.message
-          : "Erro ao excluir lancamento manual.",
+          : "Erro ao excluir lanÃ§amento manual.",
       );
     }
   }
@@ -581,7 +500,7 @@ export default function ManualConsolidadoPage() {
             Consolidado manual
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Area isolada para registros manuais e acompanhamento por conta.
+            Ãrea isolada para registros manuais e acompanhamento por conta.
           </p>
         </div>
 
@@ -592,7 +511,7 @@ export default function ManualConsolidadoPage() {
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
           >
             <PlusCircle size={16} />
-            Novo lancamento
+            Novo lançamento
           </button>
 
           <div className="flex overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 p-1">
@@ -626,10 +545,17 @@ export default function ManualConsolidadoPage() {
       {activeTab === "resumo" && (
         <div className="mt-6 space-y-5">
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,0.8fr))_auto]">
-            <AccountMultiSelect
+            <CheckboxMultiSelect
               label="ID"
-              selectedIds={summaryAccountIdsInput}
+              emptyLabel="Todos os IDs"
+              allSelectedLabel="Todos os IDs"
+              selectedValues={summaryAccountIdsInput}
               onChange={setSummaryAccountIdsInput}
+              options={ACCOUNT_FILTER_ITEMS.map((account) => ({
+                value: account.code,
+                label: account.code,
+                description: account.companyName,
+              }))}
             />
 
             <div>
@@ -703,15 +629,15 @@ export default function ManualConsolidadoPage() {
           )}
 
           <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-            <table className="w-full min-w-[1100px] text-left">
+            <table className="w-full min-w-275 text-left">
               <thead className="bg-gray-50">
                 <tr className="text-[11px] uppercase tracking-wide text-gray-700">
                   <th className="px-3 py-3 font-semibold">ID</th>
                   <th className="px-3 py-3 font-semibold">Saldo inicial</th>
-                  <th className="px-3 py-3 font-semibold">Entrada</th>
-                  <th className="px-3 py-3 font-semibold">Saida</th>
+                  <th className="px-3 py-3 font-semibold">Entradas</th>
+                  <th className="px-3 py-3 font-semibold">Saídas</th>
                   <th className="px-3 py-3 font-semibold">Resgates</th>
-                  <th className="px-3 py-3 font-semibold">Aplicacoes</th>
+                  <th className="px-3 py-3 font-semibold">Aplicações</th>
                   <th className="px-3 py-3 font-semibold">Entre contas</th>
                   <th className="px-3 py-3 font-semibold">Total</th>
                 </tr>
@@ -849,10 +775,17 @@ export default function ManualConsolidadoPage() {
       {activeTab === "registros" && (
         <div className="mt-6 space-y-5">
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_repeat(2,minmax(0,0.8fr))_minmax(0,0.8fr)]">
-            <AccountMultiSelect
+            <CheckboxMultiSelect
               label="ID"
-              selectedIds={entriesAccountIdsInput}
+              emptyLabel="Todos os IDs"
+              allSelectedLabel="Todos os IDs"
+              selectedValues={entriesAccountIdsInput}
               onChange={setEntriesAccountIdsInput}
+              options={ACCOUNT_FILTER_ITEMS.map((account) => ({
+                value: account.code,
+                label: account.code,
+                description: account.companyName,
+              }))}
             />
 
             <div>
@@ -905,7 +838,7 @@ export default function ManualConsolidadoPage() {
 
             <div className="xl:col-span-2">
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                Descricao
+                Histórico
               </label>
               <input
                 type="text"
@@ -913,32 +846,27 @@ export default function ManualConsolidadoPage() {
                 onChange={(event) =>
                   setEntriesDescriptionInput(event.target.value)
                 }
-                placeholder="Filtrar por descricao"
+                placeholder="Filtrar por histórico"
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                Classificacao
-              </label>
-              <select
-                value={entriesAssignmentInput}
-                onChange={(event) =>
-                  setEntriesAssignmentInput(
-                    event.target.value as ManualConsolidadoAssignment | "",
-                  )
-                }
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="">Todas</option>
-                {MANUAL_CONSOLIDADO_ASSIGNMENT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CheckboxMultiSelect
+              label="Atribuição"
+              emptyLabel="Todas"
+              allSelectedLabel="Todas"
+              selectedValues={entriesAssignmentInput}
+              onChange={(values) =>
+                setEntriesAssignmentInput(
+                  values as ManualConsolidadoAssignment[],
+                )
+              }
+              options={MANUAL_CONSOLIDADO_ASSIGNMENT_OPTIONS.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+              widthClassName="w-72"
+            />
 
             <div>
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -985,6 +913,14 @@ export default function ManualConsolidadoPage() {
               <CalendarRange size={16} />
               {isEntriesRefreshing ? "Atualizando..." : "Aplicar"}
             </button>
+
+            <button
+              type="button"
+              onClick={handleClearEntryFilters}
+              className="inline-flex items-center justify-center gap-2 self-end rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            >
+              Limpar todos
+            </button>
           </div>
 
           {entriesErrorMessage && (
@@ -996,57 +932,85 @@ export default function ManualConsolidadoPage() {
             </div>
           )}
 
+          {hasAppliedEntryFilters && (
+            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">
+              Total filtrado: {formatCurrency(entriesMeta.filteredAmount)}
+            </div>
+          )}
+
           <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-            <table className="w-full min-w-[1280px] text-left">
+            <table className="w-full min-w-7xl text-left">
               <thead className="bg-gray-50">
                 <tr className="text-[11px] uppercase tracking-wide text-gray-700">
                   <th className="px-3 py-3 font-semibold">ID</th>
                   <th className="px-3 py-3 font-semibold">Empresa</th>
                   <th className="px-3 py-3 font-semibold">Data</th>
                   <th className="px-3 py-3 font-semibold">Montante</th>
-                  <th className="px-3 py-3 font-semibold">Descricao</th>
-                  <th className="px-3 py-3 font-semibold">Classificacao</th>
+                  <th className="px-3 py-3 font-semibold">Histórico</th>
+                  <th className="px-3 py-3 font-semibold">Atribuição</th>
                   <th className="px-3 py-3 font-semibold">Status</th>
-                  <th className="px-3 py-3 font-semibold text-right">Acoes</th>
+                  <th className="px-3 py-3 font-semibold text-right">
+                    AÃ§Ãµes
+                  </th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-gray-100">
                 {entries.map((entry) => (
-                  <tr
-                    key={entry.id}
-                    className="align-top text-sm text-gray-700"
-                  >
-                    <td className="px-3 py-3 font-medium text-gray-900">
+                  <tr key={entry.id} className="text-sm text-gray-700">
+                    <td className="px-3 py-3 align-middle font-medium text-gray-900">
                       {entry.accountId}
                     </td>
-                    <td className="px-3 py-3">{entry.companyName}</td>
-                    <td className="px-3 py-3 whitespace-nowrap">
+                    <td className="px-3 py-3 align-middle">
+                      {entry.companyName}
+                    </td>
+                    <td className="px-3 py-3 align-middle whitespace-nowrap">
                       {entry.date}
                     </td>
                     <td
-                      className={`${VALUE_CELL_CLASS} font-medium text-gray-900`}
+                      className={`${VALUE_CELL_CLASS} align-middle font-medium text-gray-900`}
                     >
                       {formatCurrency(entry.amount)}
                     </td>
-                    <td className="px-3 py-3">
-                      <div className="max-w-sm break-words text-gray-700">
+                    <td className="px-3 py-3 align-middle">
+                      <div className="max-w-sm wrap-break-word text-gray-700">
                         {entry.description}
                       </div>
                     </td>
                     <td className="px-3 py-3">
-                      <div
-                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getManualConsolidadoAssignmentClasses(
-                          entry.assignment,
-                        )}`}
-                      >
-                        {getManualConsolidadoAssignmentLabel(entry.assignment)}
-                      </div>
-
-                      {entry.assignment === "TRANSFERENCIA_EC" && (
-                        <div className="mt-2 text-xs text-gray-500">
-                          {getManualConsolidadoTransferDirectionLabel(
-                            entry.transferDirection,
+                      {entry.assignment === "TRANSFERENCIA_EC" ? (
+                        <div
+                          className={`inline-flex min-w-[13rem] items-center justify-center gap-1 rounded-full border px-4 py-1.5 text-center text-xs font-semibold ${getManualConsolidadoAssignmentClasses(
+                            entry.assignment,
+                          )}`}
+                        >
+                          <span>
+                            {getManualConsolidadoAssignmentLabel(
+                              entry.assignment,
+                            )}
+                          </span>
+                          <span>(</span>
+                          <span
+                            className={
+                              isTransferDirectionCredit(entry.transferDirection)
+                                ? "text-emerald-600"
+                                : "text-rose-600"
+                            }
+                          >
+                            {isTransferDirectionCredit(entry.transferDirection)
+                              ? "C"
+                              : "D"}
+                          </span>
+                          <span>)</span>
+                        </div>
+                      ) : (
+                        <div
+                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getManualConsolidadoAssignmentClasses(
+                            entry.assignment,
+                          )}`}
+                        >
+                          {getManualConsolidadoAssignmentLabel(
+                            entry.assignment,
                           )}
                         </div>
                       )}
@@ -1102,11 +1066,11 @@ export default function ManualConsolidadoPage() {
                           {deleteConfirmId === entry.id && (
                             <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-rose-200 bg-white p-3 shadow-lg">
                               <p className="text-sm font-semibold text-gray-900">
-                                Excluir lancamento?
+                                Excluir lanÃ§amento?
                               </p>
-                              <p className="mt-1 whitespace-normal break-words text-xs leading-5 text-gray-500">
+                              <p className="mt-1 whitespace-normal wrap-break-word text-xs leading-5 text-gray-500">
                                 Esse registro sera removido da base manual e do
-                                resumo desta area.
+                                resumo desta Ã¡rea.
                               </p>
 
                               <div className="mt-3 flex justify-end gap-2">
@@ -1141,7 +1105,7 @@ export default function ManualConsolidadoPage() {
                       colSpan={8}
                       className="px-4 py-10 text-center text-sm text-gray-500"
                     >
-                      Nenhum lancamento encontrado para os filtros informados.
+                      Nenhum lanÃ§amento encontrado para os filtros informados.
                     </td>
                   </tr>
                 )}
@@ -1151,8 +1115,8 @@ export default function ManualConsolidadoPage() {
 
           <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
             <span>
-              Mostrando pagina {entriesMeta.page} de {entriesMeta.totalPages} •{" "}
-              {entriesMeta.totalItems} registro(s)
+              Mostrando pÃ¡gina {entriesMeta.page} de {entriesMeta.totalPages}{" "}
+              â€¢ {entriesMeta.totalItems} registro(s)
             </span>
 
             <div className="flex gap-2">
@@ -1177,7 +1141,7 @@ export default function ManualConsolidadoPage() {
                 }
                 className="rounded-xl border border-gray-200 bg-white px-3 py-2 font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Proxima
+                PrÃ³xima
               </button>
             </div>
           </div>

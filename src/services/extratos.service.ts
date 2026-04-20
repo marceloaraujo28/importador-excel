@@ -113,8 +113,12 @@ export async function listExtratos(
     searchParams.set("dateTo", params.dateTo);
   }
 
-  if (params.dateOrder) {
-    searchParams.set("dateOrder", params.dateOrder);
+  if (params.amountOrder) {
+    searchParams.set("amountOrder", params.amountOrder);
+  }
+
+  if (params.description) {
+    searchParams.set("description", params.description);
   }
 
   const queryString = searchParams.toString();

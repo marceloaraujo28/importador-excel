@@ -103,7 +103,7 @@ function getAssignmentSelectClasses(assignment: string) {
 
 const defaultMeta: ListExtratosMeta = {
   page: 1,
-  pageSize: 20,
+  pageSize: 50,
   totalItems: 0,
   totalPages: 1,
 };
@@ -140,14 +140,16 @@ export default function ExtratosPage() {
   const [assignmentFilter, setAssignmentFilter] = useState<
     "TODAS" | Exclude<ExtractAssignment, "IGNORAR">
   >("TODAS");
-  const [dateOrder, setDateOrder] = useState<"asc" | "desc">("desc");
+  const [amountOrder, setAmountOrder] = useState<"asc" | "desc" | "">("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [descriptionFilter, setDescriptionFilter] = useState("");
+  const [debouncedDescriptionFilter, setDebouncedDescriptionFilter] =
+    useState(descriptionFilter);
   const [value, setValue] = useState<number | undefined>(undefined);
   const [debouncedValue, setDebouncedValue] = useState(value);
 
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
 
   const changedRows = useMemo(() => {
     return rows.filter(
@@ -171,13 +173,16 @@ export default function ExtratosPage() {
 
       const result = await listExtratos({
         page,
-        pageSize,
+        pageSize: 50,
         ...(assignmentFilter !== "TODAS"
           ? { assignment: assignmentFilter }
           : {}),
         ...(dateFrom ? { dateFrom } : {}),
         ...(dateTo ? { dateTo } : {}),
-        dateOrder,
+        amountOrder,
+        ...(debouncedDescriptionFilter
+          ? { description: debouncedDescriptionFilter }
+          : {}),
         ...(debouncedValue !== undefined ? { value: debouncedValue } : {}),
         ...(selectedAccountIds.length
           ? { accountIds: selectedAccountIds }
@@ -214,14 +219,22 @@ export default function ExtratosPage() {
   }, [value]);
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedDescriptionFilter(descriptionFilter.trim());
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [descriptionFilter]);
+
+  useEffect(() => {
     loadExtratos();
   }, [
     page,
-    pageSize,
     assignmentFilter,
     dateFrom,
     dateTo,
-    dateOrder,
+    amountOrder,
+    debouncedDescriptionFilter,
     debouncedValue,
     selectedAccountIds,
     selectedBanks,
@@ -287,7 +300,6 @@ export default function ExtratosPage() {
           : {}),
         ...(dateFrom ? { dateFrom } : {}),
         ...(dateTo ? { dateTo } : {}),
-        dateOrder,
       });
 
       const url = window.URL.createObjectURL(blob);
@@ -490,9 +502,10 @@ export default function ExtratosPage() {
 
   function handleClearFilters() {
     setAssignmentFilter("TODAS");
-    setDateOrder("desc");
+    setAmountOrder("");
     setDateFrom("");
     setDateTo("");
+    setDescriptionFilter("");
     setValue(undefined);
     setSelectedAccountIds([]);
     setSelectedBanks([]);
@@ -658,7 +671,7 @@ export default function ExtratosPage() {
             <div>
               <label className="mb-1 text-xs text-gray-500">Valor</label>
               <NumericFormat
-                value={value}
+                value={value ?? ""}
                 thousandSeparator="."
                 decimalSeparator=","
                 prefix="R$ "
@@ -711,31 +724,32 @@ export default function ExtratosPage() {
 
             <div>
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                Ordenação
+                Ordenação por valor
               </label>
               <select
-                value={dateOrder}
-                onChange={(e) => setDateOrder(e.target.value as any)}
+                value={amountOrder}
+                onChange={(e) =>
+                  setAmountOrder(e.target.value as "asc" | "desc" | "")
+                }
                 className="w-full rounded-xl border px-3 py-2 text-sm"
               >
-                <option value="desc">Mais recentes</option>
-                <option value="asc">Mais antigas</option>
+                <option value="">Sem ordenação</option>
+                <option value="desc">Maior valor</option>
+                <option value="asc">Menor valor</option>
               </select>
             </div>
 
             <div>
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                Por página
+                Histórico
               </label>
-              <select
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
+              <input
+                type="text"
+                value={descriptionFilter}
+                onChange={(e) => setDescriptionFilter(e.target.value)}
+                placeholder="Buscar por histórico"
                 className="w-full rounded-xl border px-3 py-2 text-sm"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
+              />
             </div>
 
             <div className="flex items-end">
