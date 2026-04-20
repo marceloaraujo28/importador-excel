@@ -33,6 +33,20 @@ const GROUP_ORDER_INDEX = new Map<string, number>(
   GROUP_ORDER.map((name, index) => [name, index]),
 );
 
+function getTodayInputValue() {
+  const currentDate = new Date();
+  const timezoneOffset = currentDate.getTimezoneOffset();
+  const localDate = new Date(
+    currentDate.getTime() - timezoneOffset * 60 * 1000,
+  );
+
+  return localDate.toISOString().slice(0, 10);
+}
+
+function isDateAfter(dateA: string, dateB: string) {
+  return Boolean(dateA && dateB && dateA > dateB);
+}
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -65,6 +79,8 @@ function getNegativeValueColor(value: number) {
   if (!value) return "text-gray-500";
   return "text-red-600";
 }
+
+const VALUE_CELL_CLASS = "px-3 py-3 whitespace-nowrap text-right tabular-nums";
 
 function getMetricColor(metric: ConsolidadoMetricTab | "total") {
   switch (metric) {
@@ -304,14 +320,15 @@ function DashboardMetricCard({
 }
 
 export default function DashboardPage() {
+  const todayInputValue = getTodayInputValue();
   const [activeTab, setActiveTab] = useState<DashboardTab>("sintetica");
   const [metricTab, setMetricTab] = useState<ConsolidadoMetricTab>("available");
 
-  const [dateFromInput, setDateFromInput] = useState("");
-  const [dateToInput, setDateToInput] = useState("");
+  const [dateFromInput, setDateFromInput] = useState(todayInputValue);
+  const [dateToInput, setDateToInput] = useState(todayInputValue);
 
-  const [appliedDateFrom, setAppliedDateFrom] = useState("");
-  const [appliedDateTo, setAppliedDateTo] = useState("");
+  const [appliedDateFrom, setAppliedDateFrom] = useState(todayInputValue);
+  const [appliedDateTo, setAppliedDateTo] = useState(todayInputValue);
 
   const [selectedCompanyName, setSelectedCompanyName] = useState("");
 
@@ -357,7 +374,10 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    loadDashboard();
+    void loadDashboard({
+      dateFrom: todayInputValue,
+      dateTo: todayInputValue,
+    });
   }, []);
 
   const groups = useMemo(
@@ -425,6 +445,22 @@ export default function DashboardPage() {
     });
   }
 
+  function handleDateFromChange(value: string) {
+    setDateFromInput(value);
+
+    if (dateToInput && isDateAfter(value, dateToInput)) {
+      setDateToInput(value);
+    }
+  }
+
+  function handleDateToChange(value: string) {
+    setDateToInput(value);
+
+    if (dateFromInput && isDateAfter(dateFromInput, value)) {
+      setDateFromInput(value);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
@@ -457,7 +493,8 @@ export default function DashboardPage() {
               <input
                 type="date"
                 value={dateFromInput}
-                onChange={(event) => setDateFromInput(event.target.value)}
+                max={dateToInput || undefined}
+                onChange={(event) => handleDateFromChange(event.target.value)}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
@@ -469,7 +506,8 @@ export default function DashboardPage() {
               <input
                 type="date"
                 value={dateToInput}
-                onChange={(event) => setDateToInput(event.target.value)}
+                min={dateFromInput || undefined}
+                onChange={(event) => handleDateToChange(event.target.value)}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
@@ -823,7 +861,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {detailedAccounts.map((account) => {
                   const correnteSaldoInicial = account.initialAvailable;
                   const correnteSaldoFinal = account.available;
@@ -836,7 +874,7 @@ export default function DashboardPage() {
                     <>
                       <tr
                         key={`${account.accountId}-corrente`}
-                        className="border-t-2 border-gray-300 text-sm text-gray-700"
+                        className="border-t border-gray-400 text-sm text-gray-700"
                       >
                         <td
                           rowSpan={2}
@@ -856,12 +894,12 @@ export default function DashboardPage() {
                           CONTA CORRENTE
                         </td>
 
-                        <td className="px-3 py-3">
+                        <td className={VALUE_CELL_CLASS}>
                           {formatCurrencyOrDash(correnteSaldoInicial)}
                         </td>
 
                         <td
-                          className={`px-3 py-3 ${getPositiveValueColor(
+                          className={`${VALUE_CELL_CLASS} ${getPositiveValueColor(
                             account.entries,
                           )}`}
                         >
@@ -869,7 +907,7 @@ export default function DashboardPage() {
                         </td>
 
                         <td
-                          className={`px-3 py-3 ${getNegativeValueColor(
+                          className={`${VALUE_CELL_CLASS} ${getNegativeValueColor(
                             account.outputs,
                           )}`}
                         >
@@ -877,7 +915,7 @@ export default function DashboardPage() {
                         </td>
 
                         <td
-                          className={`px-3 py-3 ${getNegativeValueColor(
+                          className={`${VALUE_CELL_CLASS} ${getNegativeValueColor(
                             account.fees,
                           )}`}
                         >
@@ -885,7 +923,7 @@ export default function DashboardPage() {
                         </td>
 
                         <td
-                          className={`px-3 py-3 ${getPositiveValueColor(
+                          className={`${VALUE_CELL_CLASS} ${getPositiveValueColor(
                             account.yields,
                           )}`}
                         >
@@ -893,7 +931,7 @@ export default function DashboardPage() {
                         </td>
 
                         <td
-                          className={`px-3 py-3 ${getPositiveValueColor(
+                          className={`${VALUE_CELL_CLASS} ${getPositiveValueColor(
                             account.rescues,
                           )}`}
                         >
@@ -901,7 +939,7 @@ export default function DashboardPage() {
                         </td>
 
                         <td
-                          className={`px-3 py-3 ${getNegativeValueColor(
+                          className={`${VALUE_CELL_CLASS} ${getNegativeValueColor(
                             account.applications,
                           )}`}
                         >
@@ -909,7 +947,7 @@ export default function DashboardPage() {
                         </td>
 
                         <td
-                          className={`px-3 py-3 font-medium ${getSignedValueColor(
+                          className={`${VALUE_CELL_CLASS} font-medium ${getSignedValueColor(
                             account.transferEcNet,
                           )}`}
                         >
@@ -918,13 +956,15 @@ export default function DashboardPage() {
                           )}
                         </td>
 
-                        <td className="px-3 py-3 font-medium text-gray-900">
+                        <td
+                          className={`${VALUE_CELL_CLASS} font-medium text-gray-900`}
+                        >
                           {formatCurrencyOrDash(correnteSaldoFinal)}
                         </td>
 
                         <td
                           rowSpan={2}
-                          className="px-3 py-3 align-middle font-semibold text-gray-900"
+                          className="px-3 py-3 align-middle whitespace-nowrap text-right font-semibold tabular-nums text-gray-900"
                         >
                           {formatCurrency(account.total)}
                         </td>
@@ -932,21 +972,21 @@ export default function DashboardPage() {
 
                       <tr
                         key={`${account.accountId}-aplicacao`}
-                        className="bg-gray-50/50 text-sm text-gray-700"
+                        className="border-t border-gray-100 bg-gray-50/50 text-sm text-gray-700"
                       >
                         <td className="px-3 py-3 font-medium text-gray-900">
                           APLICAÇÕES
                         </td>
 
-                        <td className="px-3 py-3">
+                        <td className={VALUE_CELL_CLASS}>
                           {formatCurrencyOrDash(aplicacaoSaldoInicial)}
                         </td>
 
-                        <td className="px-3 py-3 text-gray-500">-</td>
-                        <td className="px-3 py-3 text-gray-500">-</td>
-                        <td className="px-3 py-3 text-gray-500">-</td>
+                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>-</td>
+                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>-</td>
+                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>-</td>
                         <td
-                          className={`px-3 py-3 ${getPositiveValueColor(
+                          className={`${VALUE_CELL_CLASS} ${getPositiveValueColor(
                             account.monthlyYields, // aquiiiii
                           )}`}
                         >
@@ -954,7 +994,7 @@ export default function DashboardPage() {
                         </td>
 
                         <td
-                          className={`px-3 py-3 ${getNegativeValueColor(
+                          className={`${VALUE_CELL_CLASS} ${getNegativeValueColor(
                             account.rescues,
                           )}`}
                         >
@@ -962,17 +1002,17 @@ export default function DashboardPage() {
                         </td>
 
                         <td
-                          className={`px-3 py-3 ${getPositiveValueColor(
+                          className={`${VALUE_CELL_CLASS} ${getPositiveValueColor(
                             account.applications,
                           )}`}
                         >
                           {formatCurrencyOrDash(account.applications)}
                         </td>
 
-                        <td className="px-3 py-3 text-gray-500">-</td>
+                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>-</td>
 
                         <td
-                          className={`px-3 py-3 font-medium ${
+                          className={`${VALUE_CELL_CLASS} font-medium ${
                             aplicacaoSaldoFinal < 0
                               ? "text-red-600"
                               : aplicacaoSaldoFinal > 0
@@ -1004,10 +1044,10 @@ export default function DashboardPage() {
                       <td colSpan={11} className="px-3 py-3 text-right">
                         CONTA CORRENTE
                       </td>
-                      <td className="px-3 py-3">
+                      <td className={VALUE_CELL_CLASS}>
                         {formatCurrency(detailedTotals.available)}
                       </td>
-                      <td className="px-3 py-3">
+                      <td className={VALUE_CELL_CLASS}>
                         {formatCurrency(detailedTotals.available)}
                       </td>
                     </tr>
@@ -1017,7 +1057,7 @@ export default function DashboardPage() {
                         APLICAÇÕES FINANCEIRAS
                       </td>
                       <td
-                        className={`px-3 py-3 ${
+                        className={`${VALUE_CELL_CLASS} ${
                           detailedTotals.application + detailedTotals.sucata < 0
                             ? "text-red-600"
                             : detailedTotals.application +
@@ -1032,7 +1072,7 @@ export default function DashboardPage() {
                         )}
                       </td>
                       <td
-                        className={`px-3 py-3 ${
+                        className={`${VALUE_CELL_CLASS} ${
                           detailedTotals.application + detailedTotals.sucata < 0
                             ? "text-red-600"
                             : detailedTotals.application +
@@ -1052,10 +1092,10 @@ export default function DashboardPage() {
                       <td colSpan={11} className="px-3 py-3 text-right">
                         TOTAL GERAL
                       </td>
-                      <td className="px-3 py-3">
+                      <td className={VALUE_CELL_CLASS}>
                         {formatCurrency(detailedTotals.total)}
                       </td>
-                      <td className="px-3 py-3">
+                      <td className={VALUE_CELL_CLASS}>
                         {formatCurrency(detailedTotals.total)}
                       </td>
                     </tr>

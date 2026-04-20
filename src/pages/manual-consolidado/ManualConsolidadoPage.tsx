@@ -121,6 +121,8 @@ function getSignedValueColor(value: number) {
   return "text-gray-500";
 }
 
+const VALUE_CELL_CLASS = "px-3 py-3 whitespace-nowrap text-right tabular-nums";
+
 function buildAccountButtonLabel(selectedIds: string[]) {
   if (!selectedIds.length) {
     return "Todos os IDs";
@@ -725,39 +727,39 @@ export default function ManualConsolidadoPage() {
                       </div>
                     </td>
 
-                    <td className="px-3 py-3 text-gray-900">
+                    <td className={`${VALUE_CELL_CLASS} text-gray-900`}>
                       {formatCurrencyOrDash(row.initialBalance)}
                     </td>
                     <td
-                      className={`px-3 py-3 ${getPositiveValueColor(
+                      className={`${VALUE_CELL_CLASS} ${getPositiveValueColor(
                         row.entries,
                       )}`}
                     >
                       {formatCurrencyOrDash(row.entries)}
                     </td>
                     <td
-                      className={`px-3 py-3 ${getNegativeValueColor(
+                      className={`${VALUE_CELL_CLASS} ${getNegativeValueColor(
                         row.outputs,
                       )}`}
                     >
                       {formatNegativeCurrencyOrDash(row.outputs)}
                     </td>
                     <td
-                      className={`px-3 py-3 ${getPositiveValueColor(
+                      className={`${VALUE_CELL_CLASS} ${getPositiveValueColor(
                         row.rescues,
                       )}`}
                     >
                       {formatCurrencyOrDash(row.rescues)}
                     </td>
                     <td
-                      className={`px-3 py-3 ${getNegativeValueColor(
+                      className={`${VALUE_CELL_CLASS} ${getNegativeValueColor(
                         row.applications,
                       )}`}
                     >
                       {formatNegativeCurrencyOrDash(row.applications)}
                     </td>
                     <td
-                      className={`px-3 py-3 font-medium ${getSignedValueColor(
+                      className={`${VALUE_CELL_CLASS} font-medium ${getSignedValueColor(
                         row.transferBetweenAccounts,
                       )}`}
                     >
@@ -768,7 +770,7 @@ export default function ManualConsolidadoPage() {
                         : formatCurrencyOrDash(row.transferBetweenAccounts)}
                     </td>
                     <td
-                      className={`px-3 py-3 font-semibold ${getSignedValueColor(
+                      className={`${VALUE_CELL_CLASS} font-semibold ${getSignedValueColor(
                         row.total,
                       )}`}
                     >
@@ -793,29 +795,29 @@ export default function ManualConsolidadoPage() {
                 <tfoot className="border-t-2 border-gray-200 bg-gray-50">
                   <tr className="text-sm font-bold text-gray-900">
                     <td className="px-3 py-3">Totais</td>
-                    <td className="px-3 py-3">
+                    <td className={VALUE_CELL_CLASS}>
                       {formatCurrencyOrDash(
                         summaryDashboard.totals.initialBalance,
                       )}
                     </td>
-                    <td className="px-3 py-3 text-emerald-600">
+                    <td className={`${VALUE_CELL_CLASS} text-emerald-600`}>
                       {formatCurrencyOrDash(summaryDashboard.totals.entries)}
                     </td>
-                    <td className="px-3 py-3 text-red-600">
+                    <td className={`${VALUE_CELL_CLASS} text-red-600`}>
                       {formatNegativeCurrencyOrDash(
                         summaryDashboard.totals.outputs,
                       )}
                     </td>
-                    <td className="px-3 py-3 text-emerald-600">
+                    <td className={`${VALUE_CELL_CLASS} text-emerald-600`}>
                       {formatCurrencyOrDash(summaryDashboard.totals.rescues)}
                     </td>
-                    <td className="px-3 py-3 text-red-600">
+                    <td className={`${VALUE_CELL_CLASS} text-red-600`}>
                       {formatNegativeCurrencyOrDash(
                         summaryDashboard.totals.applications,
                       )}
                     </td>
                     <td
-                      className={`px-3 py-3 ${getSignedValueColor(
+                      className={`${VALUE_CELL_CLASS} ${getSignedValueColor(
                         summaryDashboard.totals.transferBetweenAccounts,
                       )}`}
                     >
@@ -830,7 +832,7 @@ export default function ManualConsolidadoPage() {
                           )}
                     </td>
                     <td
-                      className={`px-3 py-3 ${getSignedValueColor(
+                      className={`${VALUE_CELL_CLASS} ${getSignedValueColor(
                         summaryDashboard.totals.total,
                       )}`}
                     >
@@ -1022,7 +1024,9 @@ export default function ManualConsolidadoPage() {
                     <td className="px-3 py-3 whitespace-nowrap">
                       {entry.date}
                     </td>
-                    <td className="px-3 py-3 font-medium text-gray-900">
+                    <td
+                      className={`${VALUE_CELL_CLASS} font-medium text-gray-900`}
+                    >
                       {formatCurrency(entry.amount)}
                     </td>
                     <td className="px-3 py-3">
