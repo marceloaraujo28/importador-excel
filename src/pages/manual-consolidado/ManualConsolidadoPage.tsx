@@ -2,6 +2,7 @@
 import {
   AlertCircle,
   CalendarRange,
+  Download,
   Loader2,
   Pencil,
   PlusCircle,
@@ -22,6 +23,8 @@ import {
 import CheckboxMultiSelect from "../../components/filters/CheckboxMultiSelect";
 import {
   deleteManualConsolidadoEntry,
+  exportManualConsolidadoDashboardFile,
+  exportManualConsolidadoEntriesFile,
   getManualConsolidadoDashboard,
   listManualConsolidadoEntries,
   updateManualConsolidadoEntry,
@@ -154,6 +157,7 @@ export default function ManualConsolidadoPage() {
     useState<ManualConsolidadoDashboardData | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [isSummaryRefreshing, setIsSummaryRefreshing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [summaryErrorMessage, setSummaryErrorMessage] = useState<string | null>(
     null,
   );
@@ -262,6 +266,45 @@ export default function ManualConsolidadoPage() {
       [...(summaryDashboard?.rows ?? [])].sort(compareByAccountDisplayOrder),
     [summaryDashboard?.rows],
   );
+
+  const canExportSummary = useMemo(
+    () =>
+      Boolean(
+        orderedSummaryRows.length > 0 &&
+          (activeSummaryFilters.accountIds.length ||
+            activeSummaryFilters.dateFrom ||
+            activeSummaryFilters.dateTo ||
+            activeSummaryFilters.status !== "TODOS"),
+      ),
+    [activeSummaryFilters, orderedSummaryRows.length],
+  );
+
+  const canExportEntries = useMemo(
+    () =>
+      Boolean(
+        entriesMeta.totalItems > 0 &&
+          (activeEntryFilters.accountIds.length ||
+            activeEntryFilters.dateFrom ||
+            activeEntryFilters.dateTo ||
+            activeEntryFilters.amount !== undefined ||
+            activeEntryFilters.description ||
+            activeEntryFilters.assignment?.length ||
+            activeEntryFilters.status !== "TODOS"),
+      ),
+    [activeEntryFilters, entriesMeta.totalItems],
+  );
+
+  const canExportCurrentTab =
+    activeTab === "resumo" ? canExportSummary : canExportEntries;
+
+  const exportCurrentTabTooltipMessage =
+    activeTab === "resumo"
+      ? orderedSummaryRows.length === 0
+        ? "É preciso ter ao menos um registro no dashboard para exportar."
+        : "Aplique ao menos um filtro para exportar o dashboard manual."
+      : entriesMeta.totalItems === 0
+        ? "É preciso ter ao menos um registro para exportar."
+        : "Aplique ao menos um filtro para exportar os registros manuais.";
 
   useEffect(() => {
     const nextTab = (location.state as { tab?: ManualConsolidadoTab } | null)
@@ -455,6 +498,57 @@ export default function ManualConsolidadoPage() {
     }
   }
 
+  async function handleExportCurrentTab() {
+    if (!canExportCurrentTab) {
+      const message =
+        activeTab === "resumo"
+          ? "Aplique ao menos um filtro antes de exportar o dashboard manual."
+          : "Aplique ao menos um filtro antes de exportar os registros manuais.";
+
+      if (activeTab === "resumo") {
+        setSummaryErrorMessage(message);
+      } else {
+        setEntriesErrorMessage(message);
+      }
+
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+
+      const blob =
+        activeTab === "resumo"
+          ? await exportManualConsolidadoDashboardFile(activeSummaryFilters)
+          : await exportManualConsolidadoEntriesFile(activeEntryFilters);
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download =
+        activeTab === "resumo"
+          ? "consolidado-manual-dashboard.xlsx"
+          : "consolidado-manual-registros.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Erro ao exportar dados do consolidado manual.";
+
+      if (activeTab === "resumo") {
+        setSummaryErrorMessage(message);
+      } else {
+        setEntriesErrorMessage(message);
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   function handleSummaryDateFromChange(value: string) {
     setSummaryDateFromInput(value);
 
@@ -511,6 +605,33 @@ export default function ManualConsolidadoPage() {
         </div>
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="group relative">
+            <button
+              type="button"
+              onClick={() => void handleExportCurrentTab()}
+              disabled={isExporting || !canExportCurrentTab}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Exportando...
+                </>
+              ) : (
+                <>
+                  <Download size={16} />
+                  Exportar
+                </>
+              )}
+            </button>
+
+            {!canExportCurrentTab && !isExporting && (
+              <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-72 -translate-x-1/2 rounded-xl bg-gray-900 px-3 py-2 text-center text-xs font-medium text-white shadow-lg group-hover:block">
+                {exportCurrentTabTooltipMessage}
+              </div>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={() => navigate("/consolidado-manual/novo")}
@@ -1109,7 +1230,7 @@ export default function ManualConsolidadoPage() {
                       colSpan={8}
                       className="px-4 py-10 text-center text-sm text-gray-500"
                     >
-                      Nenhum lanÃ§amento encontrado para os filtros informados.
+                      Nenhum lançamento encontrado para os filtros informados.
                     </td>
                   </tr>
                 )}

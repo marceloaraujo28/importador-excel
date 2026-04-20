@@ -165,6 +165,35 @@ export default function ExtratosPage() {
     [rows],
   );
 
+  const canExportExtratos = useMemo(
+    () =>
+      Boolean(
+        meta.totalItems > 0 &&
+          (assignmentFilter !== "TODAS" ||
+            dateFrom ||
+            dateTo ||
+            value !== undefined ||
+            descriptionFilter.trim() ||
+            selectedAccountIds.length ||
+            selectedBanks.length),
+      ),
+    [
+      meta.totalItems,
+      assignmentFilter,
+      dateFrom,
+      dateTo,
+      value,
+      descriptionFilter,
+      selectedAccountIds,
+      selectedBanks,
+    ],
+  );
+
+  const exportExtratosTooltipMessage =
+    meta.totalItems === 0
+      ? "É preciso ter ao menos um registro para exportar."
+      : "Aplique ao menos um filtro para exportar os extratos.";
+
   async function loadExtratos() {
     try {
       setIsLoading(true);
@@ -290,6 +319,13 @@ export default function ExtratosPage() {
   }, []);
 
   async function handleExport() {
+    if (!canExportExtratos) {
+      setErrorMessage(
+        "Aplique ao menos um filtro antes de exportar os extratos.",
+      );
+      return;
+    }
+
     try {
       setIsExporting(true);
       setErrorMessage(null);
@@ -300,6 +336,13 @@ export default function ExtratosPage() {
           : {}),
         ...(dateFrom ? { dateFrom } : {}),
         ...(dateTo ? { dateTo } : {}),
+        ...(amountOrder ? { amountOrder } : {}),
+        ...(descriptionFilter.trim()
+          ? { description: descriptionFilter.trim() }
+          : {}),
+        ...(value !== undefined ? { value } : {}),
+        ...(selectedAccountIds.length ? { accountIds: selectedAccountIds } : {}),
+        ...(selectedBanks.length ? { bankNames: selectedBanks } : {}),
       });
 
       const url = window.URL.createObjectURL(blob);
@@ -533,24 +576,32 @@ export default function ExtratosPage() {
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={isExporting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-          >
-            {isExporting ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Exportando...
-              </>
-            ) : (
-              <>
-                <Download size={16} />
-                Exportar
-              </>
+          <div className="group relative w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={isExporting || !canExportExtratos}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Exportando...
+                </>
+              ) : (
+                <>
+                  <Download size={16} />
+                  Exportar
+                </>
+              )}
+            </button>
+
+            {!canExportExtratos && !isExporting && (
+              <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-64 -translate-x-1/2 rounded-xl bg-gray-900 px-3 py-2 text-center text-xs font-medium text-white shadow-lg group-hover:block">
+                {exportExtratosTooltipMessage}
+              </div>
             )}
-          </button>
+          </div>
 
           <button
             type="button"
