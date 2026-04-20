@@ -6,6 +6,8 @@ import ImportarExtratosPage from "../pages/extratos/ImportarExtratosPage";
 import NovoLancamentoExtratoPage from "../pages/extratos/NovoLancamentoExtratoPage";
 import RevisaoExtratosPage from "../pages/extratos/RevisaoExtratosPage";
 import OpeningBalancesPage from "../pages/balances/OpeningBalancesPage";
+import ManualConsolidadoPage from "../pages/manual-consolidado/ManualConsolidadoPage";
+import ManualConsolidadoFormPage from "../pages/manual-consolidado/ManualConsolidadoFormPage";
 
 export const router = createBrowserRouter([
   {
@@ -35,6 +37,18 @@ export const router = createBrowserRouter([
       {
         path: "saldos-iniciais",
         element: <OpeningBalancesPage />,
+      },
+      {
+        path: "consolidado-manual",
+        element: <ManualConsolidadoPage />,
+      },
+      {
+        path: "consolidado-manual/novo",
+        element: <ManualConsolidadoFormPage />,
+      },
+      {
+        path: "consolidado-manual/:id/editar",
+        element: <ManualConsolidadoFormPage />,
       },
     ],
   },
