@@ -10,11 +10,11 @@ import {
 import { NumericFormat } from "react-number-format";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ACCOUNT_FILTER_ITEMS } from "../../constants/account-filters";
+import { compareByAccountDisplayOrder } from "../../constants/account-display-order";
 import {
   getManualConsolidadoAssignmentClasses,
   getManualConsolidadoAssignmentLabel,
   getManualConsolidadoStatusClasses,
-  getManualConsolidadoTransferDirectionLabel,
   MANUAL_CONSOLIDADO_ASSIGNMENT_OPTIONS,
   MANUAL_CONSOLIDADO_STATUS_FILTER_OPTIONS,
   MANUAL_CONSOLIDADO_STATUS_OPTIONS,
@@ -255,6 +255,12 @@ export default function ManualConsolidadoPage() {
         activeEntryFilters.status !== "TODOS",
       ),
     [activeEntryFilters],
+  );
+
+  const orderedSummaryRows = useMemo(
+    () =>
+      [...(summaryDashboard?.rows ?? [])].sort(compareByAccountDisplayOrder),
+    [summaryDashboard?.rows],
   );
 
   useEffect(() => {
@@ -500,7 +506,7 @@ export default function ManualConsolidadoPage() {
             Consolidado manual
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Ãrea isolada para registros manuais e acompanhamento por conta.
+            Área isolada para registros manuais e acompanhamento por conta.
           </p>
         </div>
 
@@ -644,7 +650,7 @@ export default function ManualConsolidadoPage() {
               </thead>
 
               <tbody className="divide-y divide-gray-100">
-                {summaryDashboard?.rows.map((row) => (
+                {orderedSummaryRows.map((row) => (
                   <tr key={row.accountId} className="text-sm text-gray-700">
                     <td className="px-3 py-3 font-medium text-gray-900">
                       <div>{row.accountId}</div>
@@ -705,7 +711,7 @@ export default function ManualConsolidadoPage() {
                   </tr>
                 ))}
 
-                {!summaryDashboard?.rows.length && (
+                {!orderedSummaryRows.length && (
                   <tr>
                     <td
                       colSpan={8}
@@ -949,9 +955,7 @@ export default function ManualConsolidadoPage() {
                   <th className="px-3 py-3 font-semibold">Histórico</th>
                   <th className="px-3 py-3 font-semibold">Atribuição</th>
                   <th className="px-3 py-3 font-semibold">Status</th>
-                  <th className="px-3 py-3 font-semibold text-right">
-                    AÃ§Ãµes
-                  </th>
+                  <th className="px-3 py-3 font-semibold text-right">Ações</th>
                 </tr>
               </thead>
 
@@ -980,7 +984,7 @@ export default function ManualConsolidadoPage() {
                     <td className="px-3 py-3">
                       {entry.assignment === "TRANSFERENCIA_EC" ? (
                         <div
-                          className={`inline-flex min-w-[13rem] items-center justify-center gap-1 rounded-full border px-4 py-1.5 text-center text-xs font-semibold ${getManualConsolidadoAssignmentClasses(
+                          className={`inline-flex min-w-52 items-center justify-center gap-1 rounded-full border px-4 py-1.5 text-center text-xs font-semibold ${getManualConsolidadoAssignmentClasses(
                             entry.assignment,
                           )}`}
                         >
@@ -1115,8 +1119,8 @@ export default function ManualConsolidadoPage() {
 
           <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
             <span>
-              Mostrando pÃ¡gina {entriesMeta.page} de {entriesMeta.totalPages}{" "}
-              â€¢ {entriesMeta.totalItems} registro(s)
+              Mostrando página {entriesMeta.page} de {entriesMeta.totalPages} •{" "}
+              {entriesMeta.totalItems} registro(s)
             </span>
 
             <div className="flex gap-2">
@@ -1141,7 +1145,7 @@ export default function ManualConsolidadoPage() {
                 }
                 className="rounded-xl border border-gray-200 bg-white px-3 py-2 font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                PrÃ³xima
+                Próxima
               </button>
             </div>
           </div>

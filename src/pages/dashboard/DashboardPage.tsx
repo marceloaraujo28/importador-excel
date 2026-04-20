@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CalendarRange, Loader2 } from "lucide-react";
+import { compareByAccountDisplayOrder } from "../../constants/account-display-order";
 
 import type {
   DashboardAccount,
@@ -423,7 +424,7 @@ export default function DashboardPage() {
 
   const detailedAccounts = useMemo(() => {
     if (selectedCompanyName === "Todas as empresas") {
-      return accounts;
+      return [...accounts].sort(compareByAccountDisplayOrder);
     }
 
     return accounts.filter(
@@ -842,7 +843,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-            <table className="w-full min-w-[1360px] text-left">
+            <table className="w-full min-w-340 text-left">
               <thead className="bg-gray-50">
                 <tr className="text-[11px] uppercase tracking-wide text-gray-700">
                   <th className="px-3 py-3 font-semibold">ID</th>
@@ -982,9 +983,15 @@ export default function DashboardPage() {
                           {formatCurrencyOrDash(aplicacaoSaldoInicial)}
                         </td>
 
-                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>-</td>
-                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>-</td>
-                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>-</td>
+                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>
+                          -
+                        </td>
+                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>
+                          -
+                        </td>
+                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>
+                          -
+                        </td>
                         <td
                           className={`${VALUE_CELL_CLASS} ${getPositiveValueColor(
                             account.monthlyYields, // aquiiiii
@@ -1009,7 +1016,9 @@ export default function DashboardPage() {
                           {formatCurrencyOrDash(account.applications)}
                         </td>
 
-                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>-</td>
+                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>
+                          -
+                        </td>
 
                         <td
                           className={`${VALUE_CELL_CLASS} font-medium ${

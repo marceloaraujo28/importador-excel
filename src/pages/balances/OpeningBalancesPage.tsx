@@ -5,6 +5,7 @@ import {
   listOpeningBalances,
   updateOpeningBalance,
 } from "../../services/opening-balances.service";
+import { compareByAccountDisplayOrder } from "../../constants/account-display-order";
 import type { OpeningBalanceItem } from "../../types/opening-balance";
 
 type EditableOpeningBalanceRow = OpeningBalanceItem & {
@@ -82,21 +83,23 @@ export default function OpeningBalancesPage() {
   }, [rows, groupFilter]);
 
   const filteredRows = useMemo(() => {
-    return rows.filter((row) => {
-      const matchesSearch =
-        !searchTerm.trim() ||
-        row.accountId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row.bankName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row.companyName.toLowerCase().includes(searchTerm.toLowerCase());
+    return rows
+      .filter((row) => {
+        const matchesSearch =
+          !searchTerm.trim() ||
+          row.accountId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          row.bankName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          row.companyName.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesGroup =
-        groupFilter === "TODOS" || row.groupName === groupFilter;
+        const matchesGroup =
+          groupFilter === "TODOS" || row.groupName === groupFilter;
 
-      const matchesCompany =
-        companyFilter === "TODAS" || row.companyName === companyFilter;
+        const matchesCompany =
+          companyFilter === "TODAS" || row.companyName === companyFilter;
 
-      return matchesSearch && matchesGroup && matchesCompany;
-    });
+        return matchesSearch && matchesGroup && matchesCompany;
+      })
+      .sort(compareByAccountDisplayOrder);
   }, [rows, searchTerm, groupFilter, companyFilter]);
 
   const totals = useMemo(() => {
