@@ -485,80 +485,82 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-gray-50 p-3 sm:flex-row">
-            <div className="min-w-40">
-              <label className="mb-1 block text-center text-xs font-medium text-gray-500">
-                Data inicial
-              </label>
-              <input
-                type="date"
-                value={dateFromInput}
-                max={dateToInput || undefined}
-                onChange={(event) => handleDateFromChange(event.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-center text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
+        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="min-w-40">
+                <label className="mb-1 block text-center text-xs font-medium text-gray-500">
+                  Data inicial
+                </label>
+                <input
+                  type="date"
+                  value={dateFromInput}
+                  max={dateToInput || undefined}
+                  onChange={(event) => handleDateFromChange(event.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-center text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <div className="min-w-40">
+                <label className="mb-1 block text-center text-xs font-medium text-gray-500">
+                  Data final
+                </label>
+                <input
+                  type="date"
+                  value={dateToInput}
+                  min={dateFromInput || undefined}
+                  onChange={(event) => handleDateToChange(event.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-center text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleApplyFilters}
+                className="inline-flex h-10 items-center justify-center gap-2 self-end rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+              >
+                <CalendarRange size={15} />
+                {isRefreshing ? "Atualizando..." : "Aplicar"}
+              </button>
             </div>
 
-            <div className="min-w-40">
-              <label className="mb-1 block text-center text-xs font-medium text-gray-500">
-                Data final
-              </label>
-              <input
-                type="date"
-                value={dateToInput}
-                min={dateFromInput || undefined}
-                onChange={(event) => handleDateToChange(event.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-center text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
+            <div className="flex overflow-hidden rounded-2xl bg-white p-1 ring-1 ring-gray-200">
+              <button
+                type="button"
+                onClick={() => setActiveTab("sintetica")}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                  activeTab === "sintetica"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                Visão Sintética
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("analitica")}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                  activeTab === "analitica"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                Visão Analítica
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("detalhada")}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                  activeTab === "detalhada"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                Visão Detalhada
+              </button>
             </div>
-
-            <button
-              type="button"
-              onClick={handleApplyFilters}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
-            >
-              <CalendarRange size={16} />
-              {isRefreshing ? "Atualizando..." : "Aplicar"}
-            </button>
-          </div>
-
-          <div className="flex overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 p-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab("sintetica")}
-              className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                activeTab === "sintetica"
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-600 hover:bg-white"
-              }`}
-            >
-              Visão Sintética
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("analitica")}
-              className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                activeTab === "analitica"
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-600 hover:bg-white"
-              }`}
-            >
-              Visão Analítica
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("detalhada")}
-              className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                activeTab === "detalhada"
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-600 hover:bg-white"
-              }`}
-            >
-              Visão Detalhada
-            </button>
           </div>
         </div>
       </div>
