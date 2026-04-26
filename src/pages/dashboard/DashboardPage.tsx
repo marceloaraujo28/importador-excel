@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CalendarRange, Loader2 } from "lucide-react";
+import { compareByAccountDisplayOrder } from "../../constants/account-display-order";
 
 import type {
   DashboardAccount,
@@ -80,7 +81,7 @@ function getNegativeValueColor(value: number) {
   return "text-red-600";
 }
 
-const VALUE_CELL_CLASS = "px-3 py-3 whitespace-nowrap text-right tabular-nums";
+const VALUE_CELL_CLASS = "px-3 py-3 whitespace-nowrap text-left tabular-nums";
 
 function getMetricColor(metric: ConsolidadoMetricTab | "total") {
   switch (metric) {
@@ -423,7 +424,7 @@ export default function DashboardPage() {
 
   const detailedAccounts = useMemo(() => {
     if (selectedCompanyName === "Todas as empresas") {
-      return accounts;
+      return [...accounts].sort(compareByAccountDisplayOrder);
     }
 
     return accounts.filter(
@@ -477,87 +478,89 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
-            Demonstração de Saldo dos Bancos
+            Demonstrativo de Saldos Bancários
           </h2>
           <p className="mt-1 text-sm text-gray-500">
             Consolidação financeira por grupo, empresa e conta.
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-gray-50 p-3 sm:flex-row">
-            <div className="min-w-40">
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                Data inicial
-              </label>
-              <input
-                type="date"
-                value={dateFromInput}
-                max={dateToInput || undefined}
-                onChange={(event) => handleDateFromChange(event.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
+        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="min-w-40">
+                <label className="mb-1 block text-center text-xs font-medium text-gray-500">
+                  Data inicial
+                </label>
+                <input
+                  type="date"
+                  value={dateFromInput}
+                  max={dateToInput || undefined}
+                  onChange={(event) => handleDateFromChange(event.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-center text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <div className="min-w-40">
+                <label className="mb-1 block text-center text-xs font-medium text-gray-500">
+                  Data final
+                </label>
+                <input
+                  type="date"
+                  value={dateToInput}
+                  min={dateFromInput || undefined}
+                  onChange={(event) => handleDateToChange(event.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-center text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleApplyFilters}
+                className="inline-flex h-10 items-center justify-center gap-2 self-end rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+              >
+                <CalendarRange size={15} />
+                {isRefreshing ? "Atualizando..." : "Aplicar"}
+              </button>
             </div>
 
-            <div className="min-w-40">
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                Data final
-              </label>
-              <input
-                type="date"
-                value={dateToInput}
-                min={dateFromInput || undefined}
-                onChange={(event) => handleDateToChange(event.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
+            <div className="flex overflow-hidden rounded-2xl bg-white p-1 ring-1 ring-gray-200">
+              <button
+                type="button"
+                onClick={() => setActiveTab("sintetica")}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                  activeTab === "sintetica"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                Visão Sintética
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("analitica")}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                  activeTab === "analitica"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                Visão Analítica
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("detalhada")}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                  activeTab === "detalhada"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                Visão Detalhada
+              </button>
             </div>
-
-            <button
-              type="button"
-              onClick={handleApplyFilters}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
-            >
-              <CalendarRange size={16} />
-              {isRefreshing ? "Atualizando..." : "Aplicar"}
-            </button>
-          </div>
-
-          <div className="flex overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 p-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab("sintetica")}
-              className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                activeTab === "sintetica"
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-600 hover:bg-white"
-              }`}
-            >
-              Visão Sintética
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("analitica")}
-              className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                activeTab === "analitica"
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-600 hover:bg-white"
-              }`}
-            >
-              Visão Analítica
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("detalhada")}
-              className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                activeTab === "detalhada"
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-600 hover:bg-white"
-              }`}
-            >
-              Visão Detalhada
-            </button>
           </div>
         </div>
       </div>
@@ -583,7 +586,7 @@ export default function DashboardPage() {
         <div className="mt-6 space-y-5">
           <div className="grid gap-5 xl:grid-cols-2">
             <GroupSummaryCard
-              title="TOTAL - GRUPO VALE DO VERDÃO"
+              title="GRUPO VALE DO VERDÃO"
               companiesCount={
                 companies.filter(
                   (company) => company.groupName === "Grupo Vale do Verdão",
@@ -596,7 +599,7 @@ export default function DashboardPage() {
             />
 
             <GroupSummaryCard
-              title="TOTAL - CAMBUÍ"
+              title="CAMBUÍ AÇÚCAR E ÁLCOOL LTA"
               companiesCount={
                 companies.filter(
                   (company) => company.groupName === "Grupo Cambuí",
@@ -815,11 +818,8 @@ export default function DashboardPage() {
         <div className="mt-6 space-y-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h3 className="text-xl font-semibold text-gray-900">
-                Visão detalhada por empresa
-              </h3>
               <p className="mt-1 text-sm text-gray-500">
-                Mostra como os valores foram compostos por conta.
+                Exibe a composição dos valores por conta.
               </p>
             </div>
 
@@ -842,7 +842,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-            <table className="w-full min-w-[1360px] text-left">
+            <table className="w-full min-w-340 text-left">
               <thead className="bg-gray-50">
                 <tr className="text-[11px] uppercase tracking-wide text-gray-700">
                   <th className="px-3 py-3 font-semibold">ID</th>
@@ -964,7 +964,7 @@ export default function DashboardPage() {
 
                         <td
                           rowSpan={2}
-                          className="px-3 py-3 align-middle whitespace-nowrap text-right font-semibold tabular-nums text-gray-900"
+                          className="px-3 py-3 align-middle whitespace-nowrap text-left font-semibold tabular-nums text-gray-900"
                         >
                           {formatCurrency(account.total)}
                         </td>
@@ -982,9 +982,15 @@ export default function DashboardPage() {
                           {formatCurrencyOrDash(aplicacaoSaldoInicial)}
                         </td>
 
-                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>-</td>
-                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>-</td>
-                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>-</td>
+                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>
+                          -
+                        </td>
+                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>
+                          -
+                        </td>
+                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>
+                          -
+                        </td>
                         <td
                           className={`${VALUE_CELL_CLASS} ${getPositiveValueColor(
                             account.monthlyYields, // aquiiiii
@@ -1009,7 +1015,9 @@ export default function DashboardPage() {
                           {formatCurrencyOrDash(account.applications)}
                         </td>
 
-                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>-</td>
+                        <td className={`${VALUE_CELL_CLASS} text-gray-500`}>
+                          -
+                        </td>
 
                         <td
                           className={`${VALUE_CELL_CLASS} font-medium ${

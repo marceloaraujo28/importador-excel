@@ -103,7 +103,7 @@ function getAssignmentSelectClasses(assignment: string) {
 
 const defaultMeta: ListExtratosMeta = {
   page: 1,
-  pageSize: 20,
+  pageSize: 50,
   totalItems: 0,
   totalPages: 1,
 };
@@ -140,14 +140,16 @@ export default function ExtratosPage() {
   const [assignmentFilter, setAssignmentFilter] = useState<
     "TODAS" | Exclude<ExtractAssignment, "IGNORAR">
   >("TODAS");
-  const [dateOrder, setDateOrder] = useState<"asc" | "desc">("desc");
+  const [amountOrder, setAmountOrder] = useState<"asc" | "desc" | "">("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [descriptionFilter, setDescriptionFilter] = useState("");
+  const [debouncedDescriptionFilter, setDebouncedDescriptionFilter] =
+    useState(descriptionFilter);
   const [value, setValue] = useState<number | undefined>(undefined);
   const [debouncedValue, setDebouncedValue] = useState(value);
 
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
 
   const changedRows = useMemo(() => {
     return rows.filter(
@@ -163,6 +165,35 @@ export default function ExtratosPage() {
     [rows],
   );
 
+  const canExportExtratos = useMemo(
+    () =>
+      Boolean(
+        meta.totalItems > 0 &&
+          (assignmentFilter !== "TODAS" ||
+            dateFrom ||
+            dateTo ||
+            value !== undefined ||
+            descriptionFilter.trim() ||
+            selectedAccountIds.length ||
+            selectedBanks.length),
+      ),
+    [
+      meta.totalItems,
+      assignmentFilter,
+      dateFrom,
+      dateTo,
+      value,
+      descriptionFilter,
+      selectedAccountIds,
+      selectedBanks,
+    ],
+  );
+
+  const exportExtratosTooltipMessage =
+    meta.totalItems === 0
+      ? "É preciso ter ao menos um registro para exportar."
+      : "Aplique ao menos um filtro para exportar os extratos.";
+
   async function loadExtratos() {
     try {
       setIsLoading(true);
@@ -171,13 +202,16 @@ export default function ExtratosPage() {
 
       const result = await listExtratos({
         page,
-        pageSize,
+        pageSize: 50,
         ...(assignmentFilter !== "TODAS"
           ? { assignment: assignmentFilter }
           : {}),
         ...(dateFrom ? { dateFrom } : {}),
         ...(dateTo ? { dateTo } : {}),
-        dateOrder,
+        amountOrder,
+        ...(debouncedDescriptionFilter
+          ? { description: debouncedDescriptionFilter }
+          : {}),
         ...(debouncedValue !== undefined ? { value: debouncedValue } : {}),
         ...(selectedAccountIds.length
           ? { accountIds: selectedAccountIds }
@@ -214,14 +248,22 @@ export default function ExtratosPage() {
   }, [value]);
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedDescriptionFilter(descriptionFilter.trim());
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [descriptionFilter]);
+
+  useEffect(() => {
     loadExtratos();
   }, [
     page,
-    pageSize,
     assignmentFilter,
     dateFrom,
     dateTo,
-    dateOrder,
+    amountOrder,
+    debouncedDescriptionFilter,
     debouncedValue,
     selectedAccountIds,
     selectedBanks,
@@ -277,6 +319,13 @@ export default function ExtratosPage() {
   }, []);
 
   async function handleExport() {
+    if (!canExportExtratos) {
+      setErrorMessage(
+        "Aplique ao menos um filtro antes de exportar os extratos.",
+      );
+      return;
+    }
+
     try {
       setIsExporting(true);
       setErrorMessage(null);
@@ -287,7 +336,13 @@ export default function ExtratosPage() {
           : {}),
         ...(dateFrom ? { dateFrom } : {}),
         ...(dateTo ? { dateTo } : {}),
-        dateOrder,
+        ...(amountOrder ? { amountOrder } : {}),
+        ...(descriptionFilter.trim()
+          ? { description: descriptionFilter.trim() }
+          : {}),
+        ...(value !== undefined ? { value } : {}),
+        ...(selectedAccountIds.length ? { accountIds: selectedAccountIds } : {}),
+        ...(selectedBanks.length ? { bankNames: selectedBanks } : {}),
       });
 
       const url = window.URL.createObjectURL(blob);
@@ -490,9 +545,10 @@ export default function ExtratosPage() {
 
   function handleClearFilters() {
     setAssignmentFilter("TODAS");
-    setDateOrder("desc");
+    setAmountOrder("");
     setDateFrom("");
     setDateTo("");
+    setDescriptionFilter("");
     setValue(undefined);
     setSelectedAccountIds([]);
     setSelectedBanks([]);
@@ -520,24 +576,32 @@ export default function ExtratosPage() {
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={isExporting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-          >
-            {isExporting ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Exportando...
-              </>
-            ) : (
-              <>
-                <Download size={16} />
-                Exportar
-              </>
+          <div className="group relative w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={isExporting || !canExportExtratos}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Exportando...
+                </>
+              ) : (
+                <>
+                  <Download size={16} />
+                  Exportar
+                </>
+              )}
+            </button>
+
+            {!canExportExtratos && !isExporting && (
+              <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-64 -translate-x-1/2 rounded-xl bg-gray-900 px-3 py-2 text-center text-xs font-medium text-white shadow-lg group-hover:block">
+                {exportExtratosTooltipMessage}
+              </div>
             )}
-          </button>
+          </div>
 
           <button
             type="button"
@@ -575,7 +639,7 @@ export default function ExtratosPage() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {/* ID */}
             <div ref={accountIdDropdownRef} className="relative">
-              <label className="mb-1 text-xs text-gray-500">ID Conta</label>
+              <label className="mb-1 text-xs text-gray-500">ID</label>
               <button
                 type="button"
                 onClick={() => setIsAccountIdDropdownOpen((c) => !c)}
@@ -658,7 +722,7 @@ export default function ExtratosPage() {
             <div>
               <label className="mb-1 text-xs text-gray-500">Valor</label>
               <NumericFormat
-                value={value}
+                value={value ?? ""}
                 thousandSeparator="."
                 decimalSeparator=","
                 prefix="R$ "
@@ -686,7 +750,7 @@ export default function ExtratosPage() {
           {/* LINHA 2 */}
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+              <label className="mb-1 block text-xs font-medium text-gray-500">
                 Data inicial
               </label>
               <input
@@ -698,7 +762,7 @@ export default function ExtratosPage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+              <label className="mb-1 block text-xs font-medium text-gray-500">
                 Data final
               </label>
               <input
@@ -710,32 +774,33 @@ export default function ExtratosPage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                Ordenação
+              <label className="mb-1 block text-xs font-medium text-gray-500">
+                Ordenação por valor
               </label>
               <select
-                value={dateOrder}
-                onChange={(e) => setDateOrder(e.target.value as any)}
+                value={amountOrder}
+                onChange={(e) =>
+                  setAmountOrder(e.target.value as "asc" | "desc" | "")
+                }
                 className="w-full rounded-xl border px-3 py-2 text-sm"
               >
-                <option value="desc">Mais recentes</option>
-                <option value="asc">Mais antigas</option>
+                <option value="">Sem ordenação</option>
+                <option value="desc">Maior valor</option>
+                <option value="asc">Menor valor</option>
               </select>
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                Por página
+              <label className="mb-1 block text-xs font-medium text-gray-500">
+                Histórico
               </label>
-              <select
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
+              <input
+                type="text"
+                value={descriptionFilter}
+                onChange={(e) => setDescriptionFilter(e.target.value)}
+                placeholder="Buscar por histórico"
                 className="w-full rounded-xl border px-3 py-2 text-sm"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
+              />
             </div>
 
             <div className="flex items-end">
@@ -812,7 +877,7 @@ export default function ExtratosPage() {
               <table className="w-full min-w-280 text-left">
                 <thead className="bg-gray-50">
                   <tr className="text-xs uppercase tracking-wide text-gray-500">
-                    <th className="px-4 py-3 font-medium">ID Conta</th>
+                    <th className="px-4 py-3 font-medium">ID</th>
                     <th className="px-4 py-3 font-medium">Banco</th>
                     <th className="px-4 py-3 font-medium">Data</th>
                     <th className="px-4 py-3 font-medium">Histórico</th>

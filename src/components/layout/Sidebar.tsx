@@ -82,7 +82,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             }
           >
             <FolderKanban size={18} />
-            Consolidado manual
+            Fluxo de caixa
           </NavLink>
           <NavLink
             to="/saldos-iniciais"

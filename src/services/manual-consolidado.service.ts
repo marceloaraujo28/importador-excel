@@ -53,6 +53,49 @@ export async function getManualConsolidadoDashboard(params: {
   return response.json();
 }
 
+export async function exportManualConsolidadoDashboardFile(params: {
+  accountIds?: string[];
+  dateFrom?: string;
+  dateTo?: string;
+  status?: "AUTORIZADO" | "NAO_AUTORIZADO" | "TODOS";
+} = {}) {
+  const searchParams = new URLSearchParams();
+
+  if (params.accountIds?.length) {
+    for (const accountId of params.accountIds) {
+      searchParams.append("accountId", accountId);
+    }
+  }
+
+  if (params.dateFrom) {
+    searchParams.set("dateFrom", params.dateFrom);
+  }
+
+  if (params.dateTo) {
+    searchParams.set("dateTo", params.dateTo);
+  }
+
+  if (params.status) {
+    searchParams.set("status", params.status);
+  }
+
+  const queryString = searchParams.toString();
+  const url = queryString
+    ? `${BASE_URL}/consolidado-manual/exportar/resumo?${queryString}`
+    : `${BASE_URL}/consolidado-manual/exportar/resumo`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(
+      data?.error ?? "Erro ao exportar dashboard do consolidado manual",
+    );
+  }
+
+  return response.blob();
+}
+
 export async function listManualConsolidadoEntries(
   params: ManualConsolidadoEntryFilters = {},
 ): Promise<ManualConsolidadoEntriesResponse> {
@@ -92,8 +135,10 @@ export async function listManualConsolidadoEntries(
     searchParams.set("description", params.description);
   }
 
-  if (params.assignment) {
-    searchParams.set("assignment", params.assignment);
+  if (params.assignment?.length) {
+    for (const assignment of params.assignment) {
+      searchParams.append("assignment", assignment);
+    }
   }
 
   if (params.status) {
@@ -115,6 +160,64 @@ export async function listManualConsolidadoEntries(
   }
 
   return response.json();
+}
+
+export async function exportManualConsolidadoEntriesFile(
+  params: ManualConsolidadoEntryFilters = {},
+) {
+  const searchParams = new URLSearchParams();
+
+  if (params.accountIds?.length) {
+    for (const accountId of params.accountIds) {
+      searchParams.append("accountId", accountId);
+    }
+  }
+
+  if (params.dateFrom) {
+    searchParams.set("dateFrom", params.dateFrom);
+  }
+
+  if (params.dateTo) {
+    searchParams.set("dateTo", params.dateTo);
+  }
+
+  if (params.dateOrder) {
+    searchParams.set("dateOrder", params.dateOrder);
+  }
+
+  if (params.amount !== undefined) {
+    searchParams.set("amount", String(params.amount));
+  }
+
+  if (params.description) {
+    searchParams.set("description", params.description);
+  }
+
+  if (params.assignment?.length) {
+    for (const assignment of params.assignment) {
+      searchParams.append("assignment", assignment);
+    }
+  }
+
+  if (params.status) {
+    searchParams.set("status", params.status);
+  }
+
+  const queryString = searchParams.toString();
+  const url = queryString
+    ? `${BASE_URL}/consolidado-manual/exportar/lancamentos?${queryString}`
+    : `${BASE_URL}/consolidado-manual/exportar/lancamentos`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(
+      data?.error ?? "Erro ao exportar lançamentos do consolidado manual",
+    );
+  }
+
+  return response.blob();
 }
 
 export async function getManualConsolidadoEntry(

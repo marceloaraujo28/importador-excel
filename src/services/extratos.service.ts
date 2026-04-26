@@ -113,8 +113,12 @@ export async function listExtratos(
     searchParams.set("dateTo", params.dateTo);
   }
 
-  if (params.dateOrder) {
-    searchParams.set("dateOrder", params.dateOrder);
+  if (params.amountOrder) {
+    searchParams.set("amountOrder", params.amountOrder);
+  }
+
+  if (params.description) {
+    searchParams.set("description", params.description);
   }
 
   const queryString = searchParams.toString();
@@ -170,7 +174,11 @@ export async function exportExtratosFile(params: {
   assignment?: Exclude<import("../types/extrato").ExtractAssignment, "IGNORAR">;
   dateFrom?: string;
   dateTo?: string;
-  dateOrder?: "asc" | "desc";
+  amountOrder?: "asc" | "desc" | "";
+  description?: string;
+  value?: number;
+  accountIds?: string[];
+  bankNames?: string[];
 }) {
   const searchParams = new URLSearchParams();
 
@@ -186,8 +194,28 @@ export async function exportExtratosFile(params: {
     searchParams.set("dateTo", params.dateTo);
   }
 
-  if (params.dateOrder) {
-    searchParams.set("dateOrder", params.dateOrder);
+  if (params.amountOrder) {
+    searchParams.set("amountOrder", params.amountOrder);
+  }
+
+  if (params.description) {
+    searchParams.set("description", params.description);
+  }
+
+  if (params.value !== undefined) {
+    searchParams.set("amount", String(params.value));
+  }
+
+  if (params.accountIds?.length) {
+    for (const accountId of params.accountIds) {
+      searchParams.append("accountId", accountId);
+    }
+  }
+
+  if (params.bankNames?.length) {
+    for (const bankName of params.bankNames) {
+      searchParams.append("bankName", bankName);
+    }
   }
 
   const queryString = searchParams.toString();

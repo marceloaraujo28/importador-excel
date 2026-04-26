@@ -9,19 +9,19 @@ export const MANUAL_CONSOLIDADO_ASSIGNMENT_OPTIONS: Array<{
   value: ManualConsolidadoAssignment;
   label: string;
 }> = [
-  { value: "ENTRADAS", label: "Entrada" },
-  { value: "SAIDAS", label: "Saida" },
+  { value: "ENTRADAS", label: "Entradas" },
+  { value: "SAIDAS", label: "Saídas" },
   { value: "RESGATES", label: "Resgates" },
-  { value: "APLICACOES", label: "Aplicacoes" },
-  { value: "TRANSFERENCIA_EC", label: "Transferencia entre contas" },
+  { value: "APLICACOES", label: "Aplicações" },
+  { value: "TRANSFERENCIA_EC", label: "Transferências entre contas" },
 ];
 
 export const MANUAL_CONSOLIDADO_STATUS_OPTIONS: Array<{
   value: ManualConsolidadoStatus;
   label: string;
 }> = [
-  { value: "AUTORIZADO", label: "Autorizado" },
-  { value: "NAO_AUTORIZADO", label: "Nao autorizado" },
+  { value: "AUTORIZADO", label: "Autorizados" },
+  { value: "NAO_AUTORIZADO", label: "Não autorizados" },
 ];
 
 export const MANUAL_CONSOLIDADO_STATUS_FILTER_OPTIONS: Array<{
@@ -30,7 +30,7 @@ export const MANUAL_CONSOLIDADO_STATUS_FILTER_OPTIONS: Array<{
 }> = [
   { value: "TODOS", label: "Todos" },
   { value: "AUTORIZADO", label: "Autorizados" },
-  { value: "NAO_AUTORIZADO", label: "Nao autorizados" },
+  { value: "NAO_AUTORIZADO", label: "Não autorizados" },
 ];
 
 export const MANUAL_CONSOLIDADO_TRANSFER_DIRECTION_OPTIONS: Array<{
@@ -38,7 +38,7 @@ export const MANUAL_CONSOLIDADO_TRANSFER_DIRECTION_OPTIONS: Array<{
   label: string;
 }> = [
   { value: "ENTRADA", label: "Entrada" },
-  { value: "SAIDA", label: "Saida" },
+  { value: "SAIDA", label: "Saída" },
 ];
 
 export function getManualConsolidadoAssignmentLabel(

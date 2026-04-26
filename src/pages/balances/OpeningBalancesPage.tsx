@@ -5,6 +5,7 @@ import {
   listOpeningBalances,
   updateOpeningBalance,
 } from "../../services/opening-balances.service";
+import { compareByAccountDisplayOrder } from "../../constants/account-display-order";
 import type { OpeningBalanceItem } from "../../types/opening-balance";
 
 type EditableOpeningBalanceRow = OpeningBalanceItem & {
@@ -20,14 +21,23 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+function formatBankName(value: string) {
+  return value
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 export default function OpeningBalancesPage() {
   const [rows, setRows] = useState<EditableOpeningBalanceRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [groupFilter, setGroupFilter] = useState("TODOS");
-  const [companyFilter, setCompanyFilter] = useState("TODAS");
+  const [groupFilter, setGroupFilter] = useState("Todos");
+  const [companyFilter, setCompanyFilter] = useState("Todas");
 
   useEffect(() => {
     async function loadData() {
@@ -60,34 +70,44 @@ export default function OpeningBalancesPage() {
   }, []);
 
   const groupOptions = useMemo(() => {
-    return ["TODOS", ...new Set(rows.map((row) => row.groupName))];
+    return ["Todos", ...new Set(rows.map((row) => row.groupName))];
   }, [rows]);
 
   const companyOptions = useMemo(() => {
     const filteredByGroup =
-      groupFilter === "TODOS"
+      groupFilter === "Todos"
         ? rows
         : rows.filter((row) => row.groupName === groupFilter);
 
-    return ["TODAS", ...new Set(filteredByGroup.map((row) => row.companyName))];
+    const orderedCompanies = filteredByGroup
+      .slice()
+      .sort(compareByAccountDisplayOrder)
+      .map((row) => row.companyName)
+      .filter(
+        (companyName, index, items) => items.indexOf(companyName) === index,
+      );
+
+    return ["Todas", ...orderedCompanies];
   }, [rows, groupFilter]);
 
   const filteredRows = useMemo(() => {
-    return rows.filter((row) => {
-      const matchesSearch =
-        !searchTerm.trim() ||
-        row.accountId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row.bankName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row.companyName.toLowerCase().includes(searchTerm.toLowerCase());
+    return rows
+      .filter((row) => {
+        const matchesSearch =
+          !searchTerm.trim() ||
+          row.accountId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          row.bankName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          row.companyName.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesGroup =
-        groupFilter === "TODOS" || row.groupName === groupFilter;
+        const matchesGroup =
+          groupFilter === "Todos" || row.groupName === groupFilter;
 
-      const matchesCompany =
-        companyFilter === "TODAS" || row.companyName === companyFilter;
+        const matchesCompany =
+          companyFilter === "Todas" || row.companyName === companyFilter;
 
-      return matchesSearch && matchesGroup && matchesCompany;
-    });
+        return matchesSearch && matchesGroup && matchesCompany;
+      })
+      .sort(compareByAccountDisplayOrder);
   }, [rows, searchTerm, groupFilter, companyFilter]);
 
   const totals = useMemo(() => {
@@ -186,7 +206,7 @@ export default function OpeningBalancesPage() {
               Saldos Iniciais
             </h2>
             <p className="mt-1 text-sm text-gray-500">
-              Configure o saldo inicial de conta corrente e aplicações por
+              Informe o saldo inicial de contas correntes e aplicações por
               conta.
             </p>
           </div>
@@ -260,7 +280,7 @@ export default function OpeningBalancesPage() {
               value={groupFilter}
               onChange={(event) => {
                 setGroupFilter(event.target.value);
-                setCompanyFilter("TODAS");
+                setCompanyFilter("Todas");
               }}
               className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
@@ -338,7 +358,7 @@ export default function OpeningBalancesPage() {
                   </td>
 
                   <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
-                    {row.bankName}
+                    {formatBankName(row.bankName)}
                   </td>
 
                   <td className="px-4 py-4 text-sm">
