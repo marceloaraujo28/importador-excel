@@ -6,6 +6,7 @@ import {
   ACCOUNT_FILTER_ITEMS,
   type AccountFilterItem,
 } from "../../constants/account-filters";
+import { compareByAccountDisplayOrder } from "../../constants/account-display-order";
 import {
   getManualConsolidadoAssignmentClasses,
   MANUAL_CONSOLIDADO_ASSIGNMENT_OPTIONS,
@@ -66,6 +67,16 @@ export default function ManualConsolidadoFormPage() {
     () => ACCOUNT_FILTER_ITEMS.find((item) => item.code === accountId) ?? null,
     [accountId],
   );
+  const orderedAccountItems = useMemo(
+    () =>
+      [...ACCOUNT_FILTER_ITEMS].sort((a, b) =>
+        compareByAccountDisplayOrder(
+          { accountId: a.code },
+          { accountId: b.code },
+        ),
+      ),
+    [],
+  );
 
   const isTransfer = assignment === "TRANSFERENCIA_EC";
 
@@ -93,7 +104,7 @@ export default function ManualConsolidadoFormPage() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Erro ao carregar lancamento manual.",
+            : "Erro ao carregar lançamento manual.",
         );
       } finally {
         setIsLoading(false);
@@ -110,12 +121,12 @@ export default function ManualConsolidadoFormPage() {
     }
 
     if (!date) {
-      setErrorMessage("Informe a data do lancamento.");
+      setErrorMessage("Informe a data do lançamento.");
       return;
     }
 
     if (!description.trim()) {
-      setErrorMessage("Informe a descricao do lancamento.");
+      setErrorMessage("Informe o histórico do lançamento.");
       return;
     }
 
@@ -158,7 +169,7 @@ export default function ManualConsolidadoFormPage() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Erro ao salvar lancamento manual.",
+          : "Erro ao salvar lançamento manual.",
       );
     } finally {
       setIsSaving(false);
@@ -170,7 +181,7 @@ export default function ManualConsolidadoFormPage() {
       <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
         <div className="flex items-center justify-center py-16 text-gray-500">
           <Loader2 className="mr-2 animate-spin" size={18} />
-          Carregando lancamento manual...
+          Carregando lançamento manual...
         </div>
       </div>
     );
@@ -189,17 +200,19 @@ export default function ManualConsolidadoFormPage() {
           className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-gray-700"
         >
           <ArrowLeft size={16} />
-          Voltar para consolidado manual
+          Voltar para Fluxo de caixa
         </button>
 
         <h2 className="text-xl font-semibold text-gray-800 sm:text-2xl">
-          {isEditing ? "Editar lancamento manual" : "Novo lancamento manual"}
+          {isEditing
+            ? "Editar lançamento manual"
+            : "Inclusão de lançamento manual"}
         </h2>
 
         <p className="mt-1 text-sm text-gray-500">
           {isEditing
             ? "Atualize os dados do registro manual."
-            : "Cadastre um novo registro para compor o consolidado manual."}
+            : "Cadastre um novo lançamento para compor o Fluxo de caixa."}
         </p>
       </div>
 
@@ -207,7 +220,7 @@ export default function ManualConsolidadoFormPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
             <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-              ID da conta
+              ID
             </label>
             <select
               value={accountId}
@@ -215,13 +228,11 @@ export default function ManualConsolidadoFormPage() {
               className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
               <option value="">Selecione uma conta</option>
-              {[...ACCOUNT_FILTER_ITEMS]
-                .sort((a, b) => a.code.localeCompare(b.code))
-                .map((account) => (
-                  <option key={account.code} value={account.code}>
-                    {account.code} - {account.bankName}
-                  </option>
-                ))}
+              {orderedAccountItems.map((account) => (
+                <option key={account.code} value={account.code}>
+                  {account.code} - {account.bankName}
+                </option>
+              ))}
             </select>
 
             {selectedAccount && (
@@ -353,7 +364,7 @@ export default function ManualConsolidadoFormPage() {
 
             {!isEditing && (
               <p className="mt-2 text-xs text-gray-500">
-                Todo novo lancamento nasce como nao autorizado.
+                Novos lançamentos são, por padrão, não autorizados.
               </p>
             )}
           </div>
@@ -392,12 +403,12 @@ export default function ManualConsolidadoFormPage() {
             ) : isEditing ? (
               <>
                 <Save size={16} />
-                Salvar alteracoes
+                Salvar alterações
               </>
             ) : (
               <>
                 <PlusCircle size={16} />
-                Salvar lancamento
+                Salvar lançamento
               </>
             )}
           </button>

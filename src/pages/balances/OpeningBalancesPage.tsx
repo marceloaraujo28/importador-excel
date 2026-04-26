@@ -36,8 +36,8 @@ export default function OpeningBalancesPage() {
   const [pageError, setPageError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [groupFilter, setGroupFilter] = useState("TODOS");
-  const [companyFilter, setCompanyFilter] = useState("TODAS");
+  const [groupFilter, setGroupFilter] = useState("Todos");
+  const [companyFilter, setCompanyFilter] = useState("Todas");
 
   useEffect(() => {
     async function loadData() {
@@ -70,16 +70,24 @@ export default function OpeningBalancesPage() {
   }, []);
 
   const groupOptions = useMemo(() => {
-    return ["TODOS", ...new Set(rows.map((row) => row.groupName))];
+    return ["Todos", ...new Set(rows.map((row) => row.groupName))];
   }, [rows]);
 
   const companyOptions = useMemo(() => {
     const filteredByGroup =
-      groupFilter === "TODOS"
+      groupFilter === "Todos"
         ? rows
         : rows.filter((row) => row.groupName === groupFilter);
 
-    return ["TODAS", ...new Set(filteredByGroup.map((row) => row.companyName))];
+    const orderedCompanies = filteredByGroup
+      .slice()
+      .sort(compareByAccountDisplayOrder)
+      .map((row) => row.companyName)
+      .filter(
+        (companyName, index, items) => items.indexOf(companyName) === index,
+      );
+
+    return ["Todas", ...orderedCompanies];
   }, [rows, groupFilter]);
 
   const filteredRows = useMemo(() => {
@@ -92,10 +100,10 @@ export default function OpeningBalancesPage() {
           row.companyName.toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesGroup =
-          groupFilter === "TODOS" || row.groupName === groupFilter;
+          groupFilter === "Todos" || row.groupName === groupFilter;
 
         const matchesCompany =
-          companyFilter === "TODAS" || row.companyName === companyFilter;
+          companyFilter === "Todas" || row.companyName === companyFilter;
 
         return matchesSearch && matchesGroup && matchesCompany;
       })
@@ -198,7 +206,7 @@ export default function OpeningBalancesPage() {
               Saldos Iniciais
             </h2>
             <p className="mt-1 text-sm text-gray-500">
-              Configure o saldo inicial de conta corrente e aplicações por
+              Informe o saldo inicial de contas correntes e aplicações por
               conta.
             </p>
           </div>
@@ -272,7 +280,7 @@ export default function OpeningBalancesPage() {
               value={groupFilter}
               onChange={(event) => {
                 setGroupFilter(event.target.value);
-                setCompanyFilter("TODAS");
+                setCompanyFilter("Todas");
               }}
               className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >

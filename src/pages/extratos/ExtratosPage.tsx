@@ -639,7 +639,7 @@ export default function ExtratosPage() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {/* ID */}
             <div ref={accountIdDropdownRef} className="relative">
-              <label className="mb-1 text-xs text-gray-500">ID Conta</label>
+              <label className="mb-1 text-xs text-gray-500">ID</label>
               <button
                 type="button"
                 onClick={() => setIsAccountIdDropdownOpen((c) => !c)}
@@ -750,7 +750,7 @@ export default function ExtratosPage() {
           {/* LINHA 2 */}
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+              <label className="mb-1 block text-xs font-medium text-gray-500">
                 Data inicial
               </label>
               <input
@@ -762,7 +762,7 @@ export default function ExtratosPage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+              <label className="mb-1 block text-xs font-medium text-gray-500">
                 Data final
               </label>
               <input
@@ -774,7 +774,7 @@ export default function ExtratosPage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+              <label className="mb-1 block text-xs font-medium text-gray-500">
                 Ordenação por valor
               </label>
               <select
@@ -791,7 +791,7 @@ export default function ExtratosPage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+              <label className="mb-1 block text-xs font-medium text-gray-500">
                 Histórico
               </label>
               <input
@@ -877,7 +877,7 @@ export default function ExtratosPage() {
               <table className="w-full min-w-280 text-left">
                 <thead className="bg-gray-50">
                   <tr className="text-xs uppercase tracking-wide text-gray-500">
-                    <th className="px-4 py-3 font-medium">ID Conta</th>
+                    <th className="px-4 py-3 font-medium">ID</th>
                     <th className="px-4 py-3 font-medium">Banco</th>
                     <th className="px-4 py-3 font-medium">Data</th>
                     <th className="px-4 py-3 font-medium">Histórico</th>

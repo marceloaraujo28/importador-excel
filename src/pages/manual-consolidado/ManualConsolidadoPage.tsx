@@ -122,7 +122,10 @@ function getSignedValueColor(value: number) {
   return "text-gray-500";
 }
 
-const VALUE_CELL_CLASS = "px-3 py-3 whitespace-nowrap text-right tabular-nums";
+const SUMMARY_VALUE_CELL_CLASS =
+  "px-3 py-3 whitespace-nowrap text-left tabular-nums";
+const ENTRY_VALUE_CELL_CLASS =
+  "px-3 py-3 whitespace-nowrap text-right tabular-nums";
 
 export default function ManualConsolidadoPage() {
   const navigate = useNavigate();
@@ -266,6 +269,16 @@ export default function ManualConsolidadoPage() {
       [...(summaryDashboard?.rows ?? [])].sort(compareByAccountDisplayOrder),
     [summaryDashboard?.rows],
   );
+  const orderedAccountFilterOptions = useMemo(
+    () =>
+      [...ACCOUNT_FILTER_ITEMS].sort((a, b) =>
+        compareByAccountDisplayOrder(
+          { accountId: a.code },
+          { accountId: b.code },
+        ),
+      ),
+    [],
+  );
 
   const canExportSummary = useMemo(
     () =>
@@ -339,7 +352,7 @@ export default function ManualConsolidadoPage() {
       setSummaryErrorMessage(
         error instanceof Error
           ? error.message
-          : "Erro ao carregar resumo do consolidado manual.",
+          : "Erro ao carregar o resumo do fluxo de caixa.",
       );
     } finally {
       setIsSummaryLoading(false);
@@ -367,7 +380,7 @@ export default function ManualConsolidadoPage() {
       setEntriesErrorMessage(
         error instanceof Error
           ? error.message
-          : "Erro ao carregar lanÃ§amentos do consolidado manual.",
+          : "Erro ao carregar os lançamentos do fluxo de caixa.",
       );
     } finally {
       setIsEntriesLoading(false);
@@ -456,7 +469,7 @@ export default function ManualConsolidadoPage() {
       setEntriesErrorMessage(
         error instanceof Error
           ? error.message
-          : "Erro ao atualizar status do lanÃ§amento manual.",
+          : "Erro ao atualizar o status do lançamento manual.",
       );
     } finally {
       setStatusUpdatingId(null);
@@ -493,7 +506,7 @@ export default function ManualConsolidadoPage() {
       setEntriesErrorMessage(
         error instanceof Error
           ? error.message
-          : "Erro ao excluir lanÃ§amento manual.",
+          : "Erro ao excluir o lançamento manual.",
       );
     }
   }
@@ -537,7 +550,7 @@ export default function ManualConsolidadoPage() {
       const message =
         error instanceof Error
           ? error.message
-          : "Erro ao exportar dados do consolidado manual.";
+          : "Erro ao exportar os dados do fluxo de caixa.";
 
       if (activeTab === "resumo") {
         setSummaryErrorMessage(message);
@@ -586,7 +599,7 @@ export default function ManualConsolidadoPage() {
       <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
         <div className="flex items-center justify-center py-16 text-gray-500">
           <Loader2 className="mr-2 animate-spin" size={18} />
-          Carregando consolidado manual...
+          Carregando fluxo de caixa...
         </div>
       </div>
     );
@@ -597,10 +610,10 @@ export default function ManualConsolidadoPage() {
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
-            Consolidado manual
+            Fluxo de Caixa - Diário
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Área isolada para registros manuais e acompanhamento por conta.
+            Área dedicada a registros manuais e acompanhamento por conta.
           </p>
         </div>
 
@@ -678,7 +691,7 @@ export default function ManualConsolidadoPage() {
               allSelectedLabel="Todos os IDs"
               selectedValues={summaryAccountIdsInput}
               onChange={setSummaryAccountIdsInput}
-              options={ACCOUNT_FILTER_ITEMS.map((account) => ({
+              options={orderedAccountFilterOptions.map((account) => ({
                 value: account.code,
                 label: account.code,
                 description: account.companyName,
@@ -780,39 +793,39 @@ export default function ManualConsolidadoPage() {
                       </div>
                     </td>
 
-                    <td className={`${VALUE_CELL_CLASS} text-gray-900`}>
+                    <td className={`${SUMMARY_VALUE_CELL_CLASS} text-gray-900`}>
                       {formatCurrencyOrDash(row.initialBalance)}
                     </td>
                     <td
-                      className={`${VALUE_CELL_CLASS} ${getPositiveValueColor(
+                      className={`${SUMMARY_VALUE_CELL_CLASS} ${getPositiveValueColor(
                         row.entries,
                       )}`}
                     >
                       {formatCurrencyOrDash(row.entries)}
                     </td>
                     <td
-                      className={`${VALUE_CELL_CLASS} ${getNegativeValueColor(
+                      className={`${SUMMARY_VALUE_CELL_CLASS} ${getNegativeValueColor(
                         row.outputs,
                       )}`}
                     >
                       {formatNegativeCurrencyOrDash(row.outputs)}
                     </td>
                     <td
-                      className={`${VALUE_CELL_CLASS} ${getPositiveValueColor(
+                      className={`${SUMMARY_VALUE_CELL_CLASS} ${getPositiveValueColor(
                         row.rescues,
                       )}`}
                     >
                       {formatCurrencyOrDash(row.rescues)}
                     </td>
                     <td
-                      className={`${VALUE_CELL_CLASS} ${getNegativeValueColor(
+                      className={`${SUMMARY_VALUE_CELL_CLASS} ${getNegativeValueColor(
                         row.applications,
                       )}`}
                     >
                       {formatNegativeCurrencyOrDash(row.applications)}
                     </td>
                     <td
-                      className={`${VALUE_CELL_CLASS} font-medium ${getSignedValueColor(
+                      className={`${SUMMARY_VALUE_CELL_CLASS} font-medium ${getSignedValueColor(
                         row.transferBetweenAccounts,
                       )}`}
                     >
@@ -823,7 +836,7 @@ export default function ManualConsolidadoPage() {
                         : formatCurrencyOrDash(row.transferBetweenAccounts)}
                     </td>
                     <td
-                      className={`${VALUE_CELL_CLASS} font-semibold ${getSignedValueColor(
+                      className={`${SUMMARY_VALUE_CELL_CLASS} font-semibold ${getSignedValueColor(
                         row.total,
                       )}`}
                     >
@@ -848,29 +861,29 @@ export default function ManualConsolidadoPage() {
                 <tfoot className="border-t-2 border-gray-200 bg-gray-50">
                   <tr className="text-sm font-bold text-gray-900">
                     <td className="px-3 py-3">Totais</td>
-                    <td className={VALUE_CELL_CLASS}>
+                    <td className={SUMMARY_VALUE_CELL_CLASS}>
                       {formatCurrencyOrDash(
                         summaryDashboard.totals.initialBalance,
                       )}
                     </td>
-                    <td className={`${VALUE_CELL_CLASS} text-emerald-600`}>
+                    <td className={`${SUMMARY_VALUE_CELL_CLASS} text-emerald-600`}>
                       {formatCurrencyOrDash(summaryDashboard.totals.entries)}
                     </td>
-                    <td className={`${VALUE_CELL_CLASS} text-red-600`}>
+                    <td className={`${SUMMARY_VALUE_CELL_CLASS} text-red-600`}>
                       {formatNegativeCurrencyOrDash(
                         summaryDashboard.totals.outputs,
                       )}
                     </td>
-                    <td className={`${VALUE_CELL_CLASS} text-emerald-600`}>
+                    <td className={`${SUMMARY_VALUE_CELL_CLASS} text-emerald-600`}>
                       {formatCurrencyOrDash(summaryDashboard.totals.rescues)}
                     </td>
-                    <td className={`${VALUE_CELL_CLASS} text-red-600`}>
+                    <td className={`${SUMMARY_VALUE_CELL_CLASS} text-red-600`}>
                       {formatNegativeCurrencyOrDash(
                         summaryDashboard.totals.applications,
                       )}
                     </td>
                     <td
-                      className={`${VALUE_CELL_CLASS} ${getSignedValueColor(
+                      className={`${SUMMARY_VALUE_CELL_CLASS} ${getSignedValueColor(
                         summaryDashboard.totals.transferBetweenAccounts,
                       )}`}
                     >
@@ -885,7 +898,7 @@ export default function ManualConsolidadoPage() {
                           )}
                     </td>
                     <td
-                      className={`${VALUE_CELL_CLASS} ${getSignedValueColor(
+                      className={`${SUMMARY_VALUE_CELL_CLASS} ${getSignedValueColor(
                         summaryDashboard.totals.total,
                       )}`}
                     >
@@ -908,7 +921,7 @@ export default function ManualConsolidadoPage() {
               allSelectedLabel="Todos os IDs"
               selectedValues={entriesAccountIdsInput}
               onChange={setEntriesAccountIdsInput}
-              options={ACCOUNT_FILTER_ITEMS.map((account) => ({
+              options={orderedAccountFilterOptions.map((account) => ({
                 value: account.code,
                 label: account.code,
                 description: account.companyName,
@@ -1018,7 +1031,7 @@ export default function ManualConsolidadoPage() {
 
             <div>
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                Ordenacao
+                Ordenação
               </label>
               <select
                 value={entriesDateOrderInput}
@@ -1093,7 +1106,7 @@ export default function ManualConsolidadoPage() {
                       {entry.date}
                     </td>
                     <td
-                      className={`${VALUE_CELL_CLASS} align-middle font-medium text-gray-900`}
+                      className={`${ENTRY_VALUE_CELL_CLASS} align-middle font-medium text-gray-900`}
                     >
                       {formatCurrency(entry.amount)}
                     </td>
